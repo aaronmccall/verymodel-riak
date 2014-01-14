@@ -1,0 +1,1 @@
+# verymodel-riak: Riak extensions for VeryModel
