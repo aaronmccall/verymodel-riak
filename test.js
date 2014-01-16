@@ -3,23 +3,23 @@ var riak    = require('./lib/fakeriak');
 var veryriak     = require('./');
 var fixtures = require('./lib/fixtures');
 var def = fixtures.def,
-    opts = fixtures.opts,
+    options = fixtures.options,
     data = fixtures.data,
     riak_data = fixtures.riak.data;
 
-var client = opts.client = riak.init(fixtures.riak);
+var client = options.client = riak.init(fixtures.riak);
 
 module.exports = {
     indexes: {
         setUp: function (cb) {
-            this.model = new veryriak.VeryRiakModel(def, opts);
+            this.model = new veryriak.VeryRiakModel(def, options);
             this.instance = this.model.create(data[0]);
             cb();
         },
         autocreate_fields_from_indexes_option: function (test) {
             var self = this;
-            test.expect(opts.indexes.length);
-            opts.indexes.forEach(function (index) {
+            test.expect(options.indexes.length);
+            options.indexes.forEach(function (index) {
                 index = Array.isArray(index) ? index[0] : index;
                 var def = self.model.definition[index];
                 test.ok(def.index);
@@ -28,7 +28,7 @@ module.exports = {
         },
         autocreated_fields_are_private_by_default: function (test) {
             var self = this,
-                indexes = _.compact(_.map(opts.indexes, function (index) {
+                indexes = _.compact(_.map(options.indexes, function (index) {
                     // return index options that are NOT specified as private: false
                     return Array.isArray(index) ? (index[2]!==false && index[0]) : false;
                 }));
@@ -41,7 +41,7 @@ module.exports = {
         },
         array_options_with_false_third_member_are_public: function (test) {
             var self = this,
-                indexes = _.compact(_.map(opts.indexes, function (index) {
+                indexes = _.compact(_.map(options.indexes, function (index) {
                     return Array.isArray(index) ? ((index[2]===false) && index[0]) : false;
                 }));
             test.expect(indexes.length);
@@ -53,7 +53,7 @@ module.exports = {
         },
         array_options_can_specify_integer_as_second_member: function (test) {
             var self = this,
-                isInts = _.compact(_.map(opts.indexes, function (index) {
+                isInts = _.compact(_.map(options.indexes, function (index) {
                     if (Array.isArray(index)) {
                         return (index[1]) ? index[0] : false;
                     }
@@ -100,7 +100,7 @@ module.exports = {
     ORM: {
         model:      {
                         setUp: function (cb) {
-                            this.model = new veryriak.VeryRiakModel(def, opts);
+                            this.model = new veryriak.VeryRiakModel(def, options);
                             this.instance = this.model.create(data[0]);
                             client.resetCalls();
                             cb();
@@ -113,13 +113,13 @@ module.exports = {
                             test.done();
                         },
                         "#all_calls_riak.getKeys_if_allKey_is_invalid": function (test) {
-                            var oldAllKey = this.model.opts.allKey,
+                            var oldAllKey = this.model.options.allKey,
                                 self = this;
-                            this.model.opts.allKey = undefined;
+                            this.model.options.allKey = undefined;
                             test.ok(!this.model.getAllKey(), 'model has a valid allKey');
                             this.model.all(function (err, list) {
                                 test.ok(client.getCalls('getKeys').length, 'getKeys was not called');
-                                self.model.opts.allKey = oldAllKey;
+                                self.model.options.allKey = oldAllKey;
                                 test.done();
                             });
                         },
@@ -151,7 +151,7 @@ module.exports = {
                     },
         instance:   {
                         setUp: function (cb) {
-                            this.model = new veryriak.VeryRiakModel(def, opts);
+                            this.model = new veryriak.VeryRiakModel(def, options);
                             this.instance = this.model.create(data[0]);
                             client.resetCalls();
                             cb();

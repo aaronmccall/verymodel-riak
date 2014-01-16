@@ -2,10 +2,8 @@ var async = require('async');
 var VeryModel = require('verymodel').VeryModel;
 var _ = require('underscore');
 
-function VeryRiakModel(def, opts) {
-    def = def||{};
-    opts = opts||{};
-    VeryModel.call(this, def, opts);
+function VeryRiakModel(definition, options) {
+    VeryModel.call(this, definition, options);
     riakifyModel(this);
 }
 
@@ -14,9 +12,9 @@ VeryRiakModel.prototype = Object.create(VeryModel.prototype);
 // Add Riak extensions to model factory
 function riakifyModel(model) {
     // Setup index definitions
-    if (Array.isArray(model.opts.indexes)) {
+    if (Array.isArray(model.options.indexes)) {
         var indexDefs = {};
-        model.opts.indexes.forEach(function (index) {
+        model.options.indexes.forEach(function (index) {
             var isInt = false,
             indexDef = model.definition[(typeof index === 'string') ? index : index[0]],
             indexName, keepPrivate;
@@ -65,25 +63,25 @@ function riakifyModel(model) {
     // Setup default value getter, if not already defined.
     if (!model.definition.value) {
         // Set model's 'value' proxy property to be an object containing
-        // all fields whose names are listed in model.opts.values or,
+        // all fields whose names are listed in model.options.values or,
         // if that option doesn't exist, a list of fields that are not
-        // marked as private (caching the list at model.opts.values).
+        // marked as private (caching the list at model.options.values).
         model.addDefinition({value: {
             private: true,
             derive: function () {
-                if (!model.opts.values) model.opts.values = _.compact(_.map(model.definition, function (def, key) {
+                if (!model.options.values) model.options.values = _.compact(_.map(model.definition, function (def, key) {
                     // By default we'll use all of the public fields
                     return (def.private && key !== 'id') ? false : key;
                 }));
-                return _.pick(this, model.opts.values);
+                return _.pick(this, model.options.values);
             }
         }});
     }
 
-    // Setup default sibling handler, if not defined in opts.
-    if (!model.opts.resolveSiblings) {
+    // Setup default sibling handler, if not defined in options.
+    if (!model.options.resolveSiblings) {
         // Default sibling handler is "last one wins."
-        model.opts.resolveSiblings = function (siblings) {
+        model.options.resolveSiblings = function (siblings) {
             return _.max(siblings, function (sibling) {
                 return parseFloat(sibling.last_mod + '.' + sibling.last_mod_usecs);
             });
@@ -93,10 +91,10 @@ function riakifyModel(model) {
     // Set an option value, requires a truthy override value to override
     // an existing option.
     model.setOption = function (name, value, override) {
-        if (this.opts.name && !override) {
+        if (this.options[name] && !override) {
             throw new Error("Can't override existing option " + name + " without truthy override argument.");
         }
-        this.opts[name] = value;
+        this.options[name] = value;
         return this;
     };
 
@@ -108,27 +106,27 @@ function riakifyModel(model) {
 
     // Get the Riak client
     model.getClient = function () {
-        if (this.opts.client) return this.opts.client;
-        throw new Error('Please set a Riak client via setClient or opts.client');
+        if (this.options.client) return this.options.client;
+        throw new Error('Please set a Riak client via setClient or options.client');
     };
 
-    model.getBucket = model.opts.getBucket || function () {
-        if (this.opts.bucket) return this.opts.bucket;
-        throw new Error('Please set a Riak bucket via opts.bucket');
+    model.getBucket = model.options.getBucket || function () {
+        if (this.options.bucket) return this.options.bucket;
+        throw new Error('Please set a Riak bucket via options.bucket');
     };
 
-    model.getAllKey = model.opts.getAllKey || function () {
-        var allKeyDef = this.opts.allKey && this.definition[this.opts.allKey],
+    model.getAllKey = model.options.getAllKey || function () {
+        var allKeyDef = this.options.allKey && this.definition[this.options.allKey],
             // default + required ensures that the allKey is always populated
             // private ensures it's not stored as part of the object's data
             // static ensures that the default value is not overwritten
             allKeyIsValid = allKeyDef && (allKeyDef.default && allKeyDef.required &&
                             allKeyDef.private && allKeyDef.static);
-        if (allKeyDef && allKeyIsValid) return { key: this.opts.allKey, def: allKeyDef};
+        if (allKeyDef && allKeyIsValid) return { key: this.options.allKey, def: allKeyDef};
     };
 
     // Returns all instances of this model
-    model.all = model.opts.all || function (cb) {
+    model.all = model.options.all || function (cb) {
         var allKey = this.getAllKey(),
             // If we don't have an allKey, we'll use getKeys.
             // Don't do this in production!
@@ -166,7 +164,7 @@ function riakifyModel(model) {
     };
 
     // Reformats indexes from Riak so that they can be applied to model instances
-    model.indexesToData = model.opts.indexesToData || function (indexes) {
+    model.indexesToData = model.options.indexesToData || function (indexes) {
         var payload = {};
         if (!indexes) return payload;
         indexes.forEach(function (index) {
@@ -175,13 +173,13 @@ function riakifyModel(model) {
         return payload;
     };
 
-    model.replyToData = model.opts.replyToData || function (reply) {
+    model.replyToData = model.options.replyToData || function (reply) {
         if (!reply || !reply.content) return {};
-        var content = (reply.content.length > 1) ? this.opts.resolveSiblings(reply.content) : reply.content[0];
+        var content = (reply.content.length > 1) ? this.options.resolveSiblings(reply.content) : reply.content[0];
         // reformat our data for VeryModel
         var indexes = this.indexesToData(content.indexes);
         var data = _.extend(content.value, indexes);
-        data[this.opts.keyField||'id'] = reply.key;
+        data[this.options.keyField||'id'] = reply.key;
         if (reply.vclock) data.vclock = reply.vclock;
         var allKey = (this.getAllKey() && this.getAllKey().key)||'';
         data = _.omit(data, allKey);
@@ -189,7 +187,7 @@ function riakifyModel(model) {
     };
 
     // Load an object's data from Riak and creates a model instance from it.
-    model.load = model.opts.load || function (id, cb) {
+    model.load = model.options.load || function (id, cb) {
         var self = this,
             request = {bucket: self.bucket, key: id};
         this.getClient().get(request, function (err, reply) {
@@ -203,7 +201,7 @@ function riakifyModel(model) {
         });
     };
 
-    model.remove = model.opts.remove || function (id, cb) {
+    model.remove = model.options.remove || function (id, cb) {
         this.getClient().del({bucket: this.bucket, key: id}, function (err, reply) {
             cb(err);
         });
@@ -247,9 +245,9 @@ function riakifyModel(model) {
     };
 
     // Finalize instanceMethods
-    model.opts.instanceMethods = _.extend({}, instanceMethods, model.opts.instanceMethods||{});
+    model.options.instanceMethods = _.extend({}, instanceMethods, model.options.instanceMethods||{});
     // and apply them
-    model.extendModel(model.opts.instanceMethods);
+    model.extendModel(model.options.instanceMethods);
 }
 
 
