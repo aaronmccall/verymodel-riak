@@ -8,7 +8,8 @@ var def = fixtures.def,
     riak_data = fixtures.riak.data;
 
 var client = options.client = riak.init(fixtures.riak);
-
+var spacer = {};
+spacer[_.map(_.range(20), function () { return '_ -'; }).join(' ')] = function (test) { test.done(); };
 module.exports = {
     indexes: {
         setUp: function (cb) {
@@ -94,9 +95,7 @@ module.exports = {
             test.done();
         }
     },
-    _: {
-        '_ - _ - _ - _ - _ - _ -': function (test) { test.done(); }
-    },
+    _: spacer,
     ORM: {
         model:      {
                         setUp: function (cb) {
@@ -106,6 +105,7 @@ module.exports = {
                             cb();
                         },
                         "#all_calls_riak.getIndex_if_allKey_is_valid": function (test) {
+                            test.expect(2);
                             test.ok(this.model.getAllKey(), 'model does not have a valid allKey');
                             this.model.all(function (err, list) {
                                 test.ok(client.getCalls('getIndex').length, 'getIndex was not called');
@@ -113,23 +113,26 @@ module.exports = {
                             test.done();
                         },
                         "#all_calls_riak.getKeys_if_allKey_is_invalid": function (test) {
-                            var oldAllKey = this.model.options.allKey,
-                                self = this;
+                            // var oldAllKey = this.model.options.allKey,
+                            //     self = this;
                             this.model.options.allKey = undefined;
+                            test.expect(2);
                             test.ok(!this.model.getAllKey(), 'model has a valid allKey');
                             this.model.all(function (err, list) {
                                 test.ok(client.getCalls('getKeys').length, 'getKeys was not called');
-                                self.model.options.allKey = oldAllKey;
+                                // self.model.options.allKey = oldAllKey;
                                 test.done();
                             });
                         },
                         "#all_returns_an_array": function (test) {
+                            test.expect(1);
                             this.model.all(function (err, instances) {
                                 test.ok(Array.isArray(instances));
                                 test.done();
                             });
                         },
                         "#all_calls_riak.get_once_for_each_instance": function (test) {
+                            test.expect(2);
                             this.model.all(function (err, instances) {
                                 test.ok(Array.isArray(instances));
                                 test.equal(client.getCalls('get').length, instances.length);
@@ -137,13 +140,15 @@ module.exports = {
                             });
                         },
                         "#load_calls_riak.get": function (test) {
-                            this.model.load('foobarbazbiz', function () {
+                            test.expect(1);
+                            this.model.load(this.instance.id, function () {
                                 test.ok(client.getCalls('get').length);
                                 test.done();
                             });
                         },
                         "#remove_calls": function (test) {
-                            this.model.remove('foobarbazbiz', function () {
+                            test.expect(1);
+                            this.model.remove(this.instance.id, function () {
                                 test.ok(client.getCalls('del').length);
                                 test.done();
                             });
@@ -157,6 +162,7 @@ module.exports = {
                             cb();
                         },
                         "#save_calls_riak.put_twice_when_there_are_siblings": function (test) {
+                            test.expect(1);
                             this.instance.save(function () {
                                 setTimeout(function () {
                                     test.ok(client.getCalls('put').length===2, 'put was called ' + client.getCalls('put').length);
