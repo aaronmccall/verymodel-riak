@@ -1,95 +1,3 @@
-# verymodel-riak
-
-Riak extensions for VeryModel
-
-- Author: Aaron McCall <aaron@andyet.net>
-- Version: 0.0.0
-- License: MIT
-
-## Examples
-
-### Using only default functionality
-
-```javascript
-var VeryRiakModel = require('verymodel-riak').VeryRiakModel;
-```
-
-**Define our fields**
-
-```javascript
-var MyDef = {
-    first_name: {},
-    name: {
-        private: true,
-        derive: function () { return this.first_name + ' ' + this.last_name; }
-    },
-    city:       {},
-    state:      {index: true},
-    zip:        {index: true, integer: true},
-    model:      {default: 'person', required: true, private: true, static: true}
-};
-```
-
-**Define our indexes**
-
-```javascript
-var MyOptions = {
-    indexes:    [['last_name', false, false], ['age', true], 'gender'],
-    allKey:     'model',
-    bucket:     "test:bucket"
-};
-
-```
-
-**Init our model factory**
-
-```javascript
-var MyModel = new VeryRiakModel(MyDef, MyOptions);
-
-```
-
-**Create a model instance**
-
-```javascript
-var myInstance = MyModel.create({
-    first_name: 'Bill',
-    last_name:  'Jones',
-    age:        40,
-    gender:     'm',
-    city:       'Atlanta',
-    state:      'GA',
-    zip:        30303
-});
-
-```
-
-myInstance.indexes will return:
-```javascript
-[
-    {key: 'last_name_bin', value: 'Jones'},
-    {key: 'age_int', value: 40},
-    {key: 'gender_bin', value: 40},
-    {key: 'state_bin', value: 'GA'},
-    {key: 'zip_int', value: 30303},
-    {key: 'model_bin', value: 'person'}
-]
-
-```
-
-myInstance.value will return:
-```javascript
-{
-    first_name: data[0].first_name,
-    last_name: 'Jones',
-    city: 'Atlanta',
-    state: 'GA',
-    zip: 30303
-}
-
-```
-
-## Defaults
-
 ```javascript
 var _       = require('underscore');
 var async = require('async');
@@ -224,7 +132,7 @@ static ensures that the default value is not overwritten
 
 ```
 
-**all**: Returns all instances of this model that are stored in Riak
+**all**: Returns all instances of this model
 
 ```javascript
         all: function (cb, opts) {
@@ -270,7 +178,7 @@ Don't do this in production!
         },
 ```
 
-**replyToData**: Reformats riak reply into the appropriate format to feed into an instance's loadData method
+**replyToData**: Reformats riak reply into the appropriate format to feed an instance's loadData method
 
 ```javascript
         replyToData: function (reply) {
@@ -406,8 +314,3 @@ reply.content.length continues to be > 1
 };
 ```
 
-## Acknowledgements
-
-    - First and foremost, thanks to @fritzy for making VeryModel without which verymodel-riak would be non-existent or pointless.
-
-    - Contributors:
