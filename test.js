@@ -1,23 +1,89 @@
-var _       = require('underscore');
-var riak    = require('./lib/fakeriak');
-var veryriak     = require('./');
-var fixtures = require('./lib/fixtures');
-var def = fixtures.def,
-    options = fixtures.options,
-    data = fixtures.data,
-    riak_data = fixtures.riak.data;
+var _           = require('underscore');
+var riak        = require('./lib/fakeriak');
+var veryriak    = require('./');
+var fixtures    = require('./lib/fixtures');
+var def         = fixtures.def,
+    options     = fixtures.options,
+    data        = fixtures.data,
+    riak_data   = fixtures.riak.data;
 
 var client = options.client = riak.init(fixtures.riak);
-var spacer = {};
-spacer[_.map(_.range(20), function () { return '_ -'; }).join(' ')] = function (test) { test.done(); };
+
 module.exports = {
+    getRequest: {
+        setUp: function (cb) {
+            this.model = new veryriak.VeryRiakModel(def, options);
+            cb();
+        },
+        'all equivalent get calls return properly': function (test) {
+            var key = 'foobarbazbiz',
+                strings = this.model.getRequest('get', key),
+                str_and_obj = this.model.getRequest('get', {key: key}),
+                obj_only = this.model.getRequest({type: 'get', options: {key: key}});
+            test.ok(_.isEqual(strings, str_and_obj), 'strings and str_and_obj are NOT the same');
+            test.ok(_.isEqual(str_and_obj, obj_only), 'str_and_obj and obj_only are NOT the same');
+            test.done();
+        },
+        "all equivalent index exact match calls return properly": function (test) {
+            var index = 'foobar',
+                key = 'bazbiz',
+                strings = this.model.getRequest('index', index, key),
+                str_and_obj = this.model.getRequest('index', {index: index, key: key}),
+                obj_only = this.model.getRequest({type: 'index', options: {index: index, key: key}});
+            test.ok(_.isEqual(strings, str_and_obj), 'strings and str_and_obj are NOT the same');
+            test.ok(_.isEqual(str_and_obj, obj_only), 'str_and_obj and obj_only are NOT the same');
+            test.done();
+        },
+        "all equivalent index range calls return properly": function (test) {
+            var index = 'foobar',
+                min = 'bazbiz',
+                max = 'zibzab',
+                strings = this.model.getRequest('index', index, min, max),
+                str_and_obj = this.model.getRequest('index', {index: index, range_min: min, range_max: max}),
+                obj_only = this.model.getRequest({type: 'index', options: {index: index, range_min: min, range_max: max}});
+            test.ok(_.isEqual(strings, str_and_obj), 'strings and str_and_obj are NOT the same: ' + JSON.stringify([strings, str_and_obj], null, 2));
+            test.ok(_.isEqual(str_and_obj, obj_only), 'str_and_obj and obj_only are NOT the same');
+            test.done();
+        },
+        "all equivalent search calls return properly": function (test) {
+            var index = 'foobar',
+                q = 'name:bazbiz',
+                strings = this.model.getRequest('search', index, q),
+                str_and_obj = this.model.getRequest('search', {index: index, q: q}),
+                obj_only = this.model.getRequest({type: 'search', options: {index: index, q: q}});
+            test.ok(_.isEqual(strings, str_and_obj), 'strings and str_and_obj are NOT the same');
+            test.ok(_.isEqual(str_and_obj, obj_only), 'str_and_obj and obj_only are NOT the same');
+            test.done();
+        },
+        "all equivalent mapreduce calls return properly": function (test) {
+            var index = 'foobar',
+                key = 'bazbiz',
+                query = [],
+                strings = this.model.getRequest('mapreduce', index, key, query),
+                str_and_obj = this.model.getRequest('mapreduce', { inputs: { index: index, key: key}, query: query}),
+                obj_only = this.model.getRequest({
+                    type: 'mapreduce',
+                    options: {
+                        inputs: {index: index, key: key},
+                        query: query
+                    }
+                });
+            test.ok(_.isEqual(strings, str_and_obj), 'strings and str_and_obj are NOT the same: ' + JSON.stringify([strings, str_and_obj], null, 2));
+            test.ok(_.isEqual(str_and_obj, obj_only), 'str_and_obj and obj_only are NOT the same');
+            test.done();
+        },
+        "* all equivalent del calls return properly": function (test) {
+            test.done();
+        }
+    },
+
     indexes: {
         setUp: function (cb) {
             this.model = new veryriak.VeryRiakModel(def, options);
             this.instance = this.model.create(data[0]);
             cb();
         },
-        autocreate_fields_from_indexes_option: function (test) {
+        "autocreate fields from indexes option": function (test) {
             var self = this;
             test.expect(options.indexes.length);
             options.indexes.forEach(function (index) {
@@ -27,7 +93,7 @@ module.exports = {
             });
             test.done();
         },
-        autocreated_fields_are_private_by_default: function (test) {
+        "autocreated fields are private by default": function (test) {
             var self = this,
                 indexes = _.compact(_.map(options.indexes, function (index) {
                     // return index options that are NOT specified as private: false
@@ -40,7 +106,7 @@ module.exports = {
             });
             test.done();
         },
-        array_options_with_false_third_member_are_public: function (test) {
+        "array options with false third member are public": function (test) {
             var self = this,
                 indexes = _.compact(_.map(options.indexes, function (index) {
                     return Array.isArray(index) ? ((index[2]===false) && index[0]) : false;
@@ -52,7 +118,7 @@ module.exports = {
             });
             test.done();
         },
-        array_options_can_specify_integer_as_second_member: function (test) {
+        "array options can specify integer as second member": function (test) {
             var self = this,
                 isInts = _.compact(_.map(options.indexes, function (index) {
                     if (Array.isArray(index)) {
@@ -66,15 +132,15 @@ module.exports = {
                 });
             test.done();
         },
-        can_be_specified_via_index_property_in_definition: function (test) {
+        "can be specified via index property in definition": function (test) {
             test.expect(this.instance.indexes.length);
             this.instance.indexes.forEach(function (index) {
-                var match = _.findWhere(riak_data[0].content[0].indexes, index);
+                var match =  _.findWhere(riak_data[0].content[0].indexes, index);
                 test.ok(match);
             });
             test.done();
         },
-        riak_index_keys_are_suffixed_with_int_if_integer_is_truthy: function (test) {
+        "riak index keys are suffixed with int if integer is truthy": function (test) {
             var indexes = _.compact(_.map(this.model.definition, function (def, key) {
                 return (def.index && def.integer) && key || false;
             })), riak_indexes = this.instance.indexes;
@@ -84,7 +150,7 @@ module.exports = {
             });
             test.done();
         },
-        riak_index_keys_are_suffixed_with_bin_if_integer_isnt_truthy: function (test) {
+        "riak index keys are suffixed with bin if integer isnt truthy": function (test) {
             var indexes = _.compact(_.map(this.model.definition, function (def, key) {
                 return (def.index && !def.integer) && key || false;
             })), riak_indexes = this.instance.indexes;
@@ -95,7 +161,7 @@ module.exports = {
             test.done();
         }
     },
-    _: spacer,
+
     ORM: {
         model:      {
                         setUp: function (cb) {
@@ -104,7 +170,7 @@ module.exports = {
                             client.resetCalls();
                             cb();
                         },
-                        "#all_calls_riak.getIndex_if_allKey_is_valid": function (test) {
+                        "#all calls riak.getIndex if allKey is valid": function (test) {
                             test.expect(2);
                             test.ok(this.model.getAllKey(), 'model does not have a valid allKey');
                             this.model.all(function (err, list) {
@@ -112,26 +178,14 @@ module.exports = {
                             });
                             test.done();
                         },
-                        "#all_calls_riak.getKeys_if_allKey_is_invalid": function (test) {
-                            // var oldAllKey = this.model.options.allKey,
-                            //     self = this;
-                            this.model.options.allKey = undefined;
-                            test.expect(2);
-                            test.ok(!this.model.getAllKey(), 'model has a valid allKey');
-                            this.model.all(function (err, list) {
-                                test.ok(client.getCalls('getKeys').length, 'getKeys was not called');
-                                // self.model.options.allKey = oldAllKey;
-                                test.done();
-                            });
-                        },
-                        "#all_returns_an_array": function (test) {
+                        "#all returns an array": function (test) {
                             test.expect(1);
                             this.model.all(function (err, instances) {
                                 test.ok(Array.isArray(instances));
                                 test.done();
                             });
                         },
-                        "#all_calls_riak.get_once_for_each_instance": function (test) {
+                        "#all calls riak.get once for each instance": function (test) {
                             test.expect(2);
                             this.model.all(function (err, instances) {
                                 test.ok(Array.isArray(instances));
@@ -139,14 +193,14 @@ module.exports = {
                                 test.done();
                             });
                         },
-                        "#load_calls_riak.get": function (test) {
+                        "#load calls riak.get": function (test) {
                             test.expect(1);
                             this.model.load(this.instance.id, function () {
                                 test.ok(client.getCalls('get').length);
                                 test.done();
                             });
                         },
-                        "#remove_calls": function (test) {
+                        "#remove calls riak.del": function (test) {
                             test.expect(1);
                             this.model.remove(this.instance.id, function () {
                                 test.ok(client.getCalls('del').length);
@@ -161,7 +215,7 @@ module.exports = {
                             client.resetCalls();
                             cb();
                         },
-                        "#save_calls_riak.put_twice_when_there_are_siblings": function (test) {
+                        "#save calls riak.put twice when there are siblings": function (test) {
                             test.expect(1);
                             this.instance.save(function () {
                                 setTimeout(function () {
@@ -169,6 +223,10 @@ module.exports = {
                                     test.done();
                                 }, 25);
                             });
+                        },
+                        "#value doesn't contain id field by default": function (test) {
+                            test.ok(!this.instance.value.id);
+                            test.done();
                         }
                     }
     }
