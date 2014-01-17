@@ -3,7 +3,7 @@
 Riak extensions for VeryModel
 
 - Author: Aaron McCall <aaron@andyet.net>
-- Version: 0.0.0
+- Version: 0.1
 - License: MIT
 
 ## Examples
