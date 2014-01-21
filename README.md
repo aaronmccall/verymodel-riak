@@ -246,7 +246,7 @@ will be passed to getRequest.
 If we're streaming, this will return the readable stream
 
 ```javascript
-            var stream = this.getClient().getIndex(request, streaming);
+            var stream = this.getClient().getIndex(request, true);
 
             stream.on('data', function dataHandler(reply) {
                 loading = true;
@@ -377,26 +377,26 @@ Override default toJSON method to make more Hapi compatible
     options: {
 ```
 
-Default allKey is Riak's magic 'give me all the keys' index
+- Default allKey is Riak's magic 'give me all the keys' index
 
 ```javascript
         allKey: '$bucket',
 ```
 
-Default key field is id
+- Default key field is id
 
 ```javascript
         keyField: 'id',
 ```
 
-pagination is on by default to prevent overloading the server
+- pagination is on by default to prevent overloading the server
 
 ```javascript
         max_results: 10,
         paginate: true,
 ```
 
-Default sibling handler is "last one wins"
+- Default sibling handler is "last one wins"
 
 ```javascript
         resolveSiblings: function (siblings) {

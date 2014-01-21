@@ -25,7 +25,7 @@ module.exports = {
                 test.done();
             });
         },
-        "#all returns an array": function (test) {
+        "#all sends an array": function (test) {
             test.expect(1);
             this.model.all(function (err, instances) {
                 test.ok(Array.isArray(instances));
@@ -67,7 +67,9 @@ module.exports = {
             });
         },
         "#all returns an EventEmitter": function (test) {
-            test.ok(this.model.all() instanceof require('events').EventEmitter);
+            var EventEmitter = require('events').EventEmitter;
+            test.ok(this.model.all() instanceof EventEmitter);
+            test.ok(this.model.all(function () {}) instanceof EventEmitter);
             test.done();
         },
         "#find calls all with cb moved to front of args": function (test) {
