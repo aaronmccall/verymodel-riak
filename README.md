@@ -3,7 +3,7 @@
 Riak extensions for VeryModel
 
 - Author: Aaron McCall <aaron@andyet.net>
-- Version: 0.3.0
+- Version: 0.4.0
 - License: MIT
 
 ## Examples
@@ -328,7 +328,7 @@ reformat our data for VeryModel
 ```javascript
             var indexes = this.indexesToData(content.indexes);
             var data = _.extend(content.value, indexes);
-            data[this.options.keyField] = reply.key;
+            if (reply.key) data[this.options.keyField] = reply.key;
             if (reply.vclock) data.vclock = reply.vclock;
             return data;
         },
@@ -338,8 +338,7 @@ reformat our data for VeryModel
 
 ```javascript
         load: function (id, cb) {
-            var self = this,
-                request = {bucket: self.bucket, key: id};
+            var self = this;
             this.getClient().get(this.getRequest('get', id), function (err, reply) {
                 if (err) return cb(err);
 ```
@@ -348,6 +347,7 @@ Resolve siblings, if necessary, or just grab our content
 
 ```javascript
                 var data = self.replyToData(reply);
+                data[self.options.keyField] = id;
                 var instance = self.create(data);
                 self.last = instance;
 ```
