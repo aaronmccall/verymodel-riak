@@ -55,12 +55,11 @@ function riakifyModel(model) {
         throw new Error('Please set a Riak client via setClient or options.client');
     };
 
-    model.options.methods = model.options.methods||{};
-    // Extend model with user supplied methods.
+    model.options.methods = _.defaults(model.options.methods||{}, defaults.methods);
+    // Extend model with user supplied methods and/or with default methods
+    // where a method of the same name is not already defined.
     _.extend(model, model.options.methods);
-    // Extend model with default methods where a method of the same name
-    // is not already defined.
-    _.defaults(model, defaults.methods);
+    
 
     // Compose instanceMethods
     model.options.instanceMethods = _.defaults(model.options.instanceMethods||{}, defaults.instanceMethods);
