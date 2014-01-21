@@ -1,10 +1,10 @@
 {
   "name": "verymodel-riak",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Riak extensions for VeryModel",
   "main": "index.js",
   "scripts": {
-    "test": "nodeunit test.js"
+    "test": "nodeunit tests"
   },
   "repository": {
     "type": "git",

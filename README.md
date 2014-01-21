@@ -3,7 +3,7 @@
 Riak extensions for VeryModel
 
 - Author: Aaron McCall <aaron@andyet.net>
-- Version: 0.1.0
+- Version: 0.2.0
 - License: MIT
 
 ## Examples
@@ -93,6 +93,7 @@ myInstance.value will return:
 ```javascript
 var _       = require('underscore');
 var async = require('async');
+var EventEmitter = require('events').EventEmitter;
 var request = require('./request_helpers.js');
 
 module.exports = {
@@ -149,7 +150,7 @@ whose definition indicates that it's an index field
 By default we'll use all of the public fields except id
 
 ```javascript
-                    return (def.private || key === 'id') ? false : key;
+                    return (def.private || key === model.options.keyField) ? false : key;
                 }));
                 return _.pick(this, model.options.values);
             }
@@ -167,8 +168,9 @@ By default we'll use all of the public fields except id
 
 ```javascript
         getAllKey: function () {
-            var allKey;
-            if (this.options.allKey === '$bucket') return (allKey = {key: this.options.allKey, def: {default: this.getBucket()}}), console.log('allKey:', allKey);
+            if (this.options.allKey === '$bucket') {
+                return {key: this.options.allKey, def: {default: this.getBucket()}};
+            }
             var allKeyDef = this.options.allKey && this.definition[this.options.allKey],
 ```
 
@@ -217,7 +219,7 @@ static ensures that the default value is not overwritten
 ```javascript
         getRequest: function (type) {
             if (_.isObject(type) && type.type && type.options) {
-                return request[type.type](this, type.options);
+                return request[type.type](this, [type.options]);
             }
             return request[type](this, _.rest(arguments));
         },
@@ -225,35 +227,78 @@ static ensures that the default value is not overwritten
 ```
 
 **all**: Returns all instances of this model that are stored in Riak
+The only required argument is a callback (or true, if you want a stream). Any additional arguments
+will be passed to getRequest.
 
 ```javascript
-        all: function (cb, opts) {
+        all: function () {
             var self = this,
+                args = _.rest(arguments, 0),
+                streaming = typeof args[0] !== 'function',
+                cb = !streaming ? args[0] : null,
                 allKey = this.getAllKey(),
+                requestArgs = ['index'],
+                request = this.getRequest.apply(this, requestArgs.concat(_.rest(args, (streaming ? 0 : 1)))),
+                proxy = new EventEmitter(),
+                instances = [], loading, riakDone;
 ```
 
-If we don't have an allKey, we'll use getKeys.
-Don't do this in production!
+If we're streaming, this will return the readable stream
 
 ```javascript
-                request = this.getRequest.apply(this, ((opts && opts.type)? [opts] : ['index', opts]));
+            var stream = this.getClient().getIndex(request, streaming);
 
-            this.getClient().getIndex(this.getRequest('index'), function (err, reply) {
-                var all = [];
-                if (err || !reply.keys || !reply.keys.length) return cb(err, all);
+            stream.on('data', function dataHandler(reply) {
+                loading = true;
+                if (reply && reply.continuation) self.continuation = reply.continuation;
                 async.each(reply.keys, function (key, done) {
                     self.load(key, function (err, instance) {
-                        all.push(instance);
+                        if (!streaming) {
+                            instances.push(instance);
+                            return done();
+                        }
+                        proxy.emit('data', instances);
+                        instances = [];
                         done();
                     });
                 }, function (err) {
-                    cb(err, all);
+                    loading = false;
+                    if (riakDone) {
+                        if (cb) return cb(null, instances);
+                        proxy.emit('end');
+                    }
                 });
                 
             });
+            stream.on('error', function errorHandler(err) {
+                if (!streaming) return cb(err, instances);
+                proxy.emit('error', err);
+            });
+            stream.on('end', function endHandler () {
+                riakDone = true;
+                if (!streaming && !loading) return cb(null, instances), cb = null;
+            });
+
+            return proxy;
         },
 ```
 
+**find**: Simplifies index lookups and can be called with the values or options object signatures.
+- values: find('index', 'key_or_min', ['max',] [function (err, instances) {}])
+- options object (shown with range query—-substitute key for range_min/range_max for exact match):
+  find({index: 'index', range_min: 'min', range_max: 'max'}, [function (err, instance)])
+
+```javascript
+        find: function () {
+            var args = _.rest(arguments, 0),
+                cb = args.pop();
+            args.unshift(cb);
+            return this.all.apply(this, args);
+        },
+
+```
+
+**find**: searches for matching 
 **indexesToData**: Reformats indexes from Riak so that they can be applied to model instances
 
 ```javascript
@@ -283,7 +328,7 @@ reformat our data for VeryModel
 ```javascript
             var indexes = this.indexesToData(content.indexes);
             var data = _.extend(content.value, indexes);
-            data[this.options.keyField||'id'] = reply.key;
+            data[this.options.keyField] = reply.key;
             if (reply.vclock) data.vclock = reply.vclock;
             return data;
         },
@@ -336,6 +381,19 @@ Default allKey is Riak's magic 'give me all the keys' index
 
 ```javascript
         allKey: '$bucket',
+```
+
+Default key field is id
+
+```javascript
+        keyField: 'id',
+```
+
+pagination is on by default to prevent overloading the server
+
+```javascript
+        max_results: 10,
+        paginate: true,
 ```
 
 Default sibling handler is "last one wins"
