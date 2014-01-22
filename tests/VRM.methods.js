@@ -85,6 +85,18 @@ module.exports = {
             };
             this.model.find.apply(this.model, findArgs);
         },
+        "#find simply proxies #all when no callback is supplied": function (test) {
+            var oldAll = this.model.all,
+                fn = function () {},
+                findArgs = ['index', 'key'];
+            this.model.all = function () {
+                var args = _.rest(arguments, 0);
+                test.ok(_.isEqual(args, findArgs));
+                this.all = oldAll;
+                test.done();
+            };
+            this.model.find.apply(this.model, findArgs);
+        },
         "#getAllKey returns $bucket as key when custom allKey isn't defined": function (test) {
             var myModel = new veryriak.VeryRiakModel({}, {bucket: 'foobar'});
             test.ok(_.isEqual(myModel.getAllKey(), {key: '$bucket', def: { default: 'foobar'}}));

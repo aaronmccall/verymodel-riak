@@ -3,7 +3,7 @@
 Riak extensions for VeryModel
 
 - Author: Aaron McCall <aaron@andyet.net>
-- Version: 0.4.0
+- Version: 0.5.0
 - License: MIT
 
 ## Examples
@@ -127,10 +127,21 @@ whose definition indicates that it's an index field
 ```javascript
                 Object.keys(defs).forEach(function (field) {
                     var def = defs[field];
-                    if (def.index) payload.push({
-                        key: field + (def.integer ? '_int' : '_bin'),
-                        value: self[field]
-                    });
+                    if (def.index) {
+                        if (!def.isArray) {
+                            payload.push({
+                                key: field + (def.integer ? '_int' : '_bin'),
+                                value: self[field]
+                            });
+                        } else {
+                            (Array.isArray(self[field]) && self[field] || self[field].split(',')).forEach(function (value) {
+                                payload.push({
+                                    key: field + (def.integer ? '_int' : '_bin'),
+                                    value: value
+                                });
+                            });
+                        }
+                    }
                 });
                 return payload;
             }
@@ -291,8 +302,9 @@ If we're streaming, this will return the readable stream
 ```javascript
         find: function () {
             var args = _.rest(arguments, 0),
-                cb = args.pop();
-            args.unshift(cb);
+                hasCb = typeof _.last(args) === 'function',
+                cb = hasCb && args.pop();
+            if (cb) args.unshift(cb);
             return this.all.apply(this, args);
         },
 
@@ -308,7 +320,24 @@ If we're streaming, this will return the readable stream
             if (!indexes) return payload;
             indexes.forEach(function (index) {
                 if (index.key !== self.getAllKey().key) {
-                    payload[index.key.replace(/(_bin|_int)$/, '')] = index.value;
+                    var field = index.key.replace(/(_bin|_int)$/, ''),
+                        def = self.definition[field];
+```
+
+If it isn't an array field, just pass the value through
+
+```javascript
+                    if (!def || !def.isArray) {
+                        payload[field] = index.value;
+                    } else {
+```
+
+Put the values back into a single field as an array
+
+```javascript
+                        if (!payload[field]) payload[field] = [];
+                        payload[field].push(index.value);
+                    }
                 }
             });
             return payload;
