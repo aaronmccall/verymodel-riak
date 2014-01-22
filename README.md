@@ -3,7 +3,7 @@
 Riak extensions for VeryModel
 
 - Author: Aaron McCall <aaron@andyet.net>
-- Version: 0.6.0
+- Version: 0.7.0
 - License: MIT
 
 ## Examples
@@ -133,21 +133,35 @@ whose definition indicates that it's an index field
 ```javascript
                 Object.keys(defs).forEach(function (field) {
                     var def = defs[field];
-                    if (def.index) {
-                        if (!def.isArray) {
-                            payload.push({
-                                key: field + (def.integer ? '_int' : '_bin'),
-                                value: self[field]
-                            });
-                        } else {
-                            (Array.isArray(self[field]) && self[field] || self[field].split(',')).forEach(function (value) {
-                                payload.push({
-                                    key: field + (def.integer ? '_int' : '_bin'),
-                                    value: (typeof value === 'string') ? value.trim() : value
-                                });
-                            });
-                        }
-                    }
+                    if (!def || !def.index) return;
+```
+
+If def.index is a function, use it to derive an index value
+
+```javascript
+                    var value = (typeof def.index === 'function') ? def.index.call(self, self[field]) : self[field];
+                    if (typeof value === 'undefined') return;
+```
+
+If we aren't expecting a multiple values, set a single key/value pair
+
+```javascript
+                    if (!def.isArray) return payload.push({
+                        key: field + (def.integer ? '_int' : '_bin'),
+                        value: value
+                    });
+```
+
+If we are expecting multiple values, set them, also splitting
+CSV strings when appropriate
+
+```javascript
+                    ((Array.isArray(value) && value) || (''+value).split(',')).forEach(function (value) {
+                        payload.push({
+                            key: field + (def.integer ? '_int' : '_bin'),
+                            value: (typeof value === 'string') ? value.trim() : value
+                        });
+                    });
                 });
                 return payload;
             }
