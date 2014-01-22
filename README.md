@@ -3,7 +3,7 @@
 Riak extensions for VeryModel
 
 - Author: Aaron McCall <aaron@andyet.net>
-- Version: 0.5.0
+- Version: 0.6.0
 - License: MIT
 
 ## Examples
@@ -23,10 +23,11 @@ var MyDef = {
         private: true,
         derive: function () { return this.first_name + ' ' + this.last_name; }
     },
-    city:       {},
-    state:      {index: true},
-    zip:        {index: true, integer: true},
-    model:      {default: 'person', required: true, private: true, static: true}
+    city:           {},
+    state:          {index: true},
+    zip:            {index: true, integer: true},
+    model:          {default: 'person', required: true, private: true, static: true},
+    favorite_foods: {index: true, isArray: true }
 };
 ```
 
@@ -52,13 +53,14 @@ var MyModel = new VeryRiakModel(MyDef, MyOptions);
 
 ```javascript
 var myInstance = MyModel.create({
-    first_name: 'Bill',
-    last_name:  'Jones',
-    age:        40,
-    gender:     'm',
-    city:       'Atlanta',
-    state:      'GA',
-    zip:        30303
+    first_name:     'Bill',
+    last_name:      'Jones',
+    age:            40,
+    gender:         'm',
+    city:           'Atlanta',
+    state:          'GA',
+    zip:            30303,
+    favorite_foods: ['pizza', 'fried chicken', 'applesauce', 'cake']
 });
 
 ```
@@ -72,6 +74,10 @@ myInstance.indexes will return:
     {key: 'state_bin', value: 'GA'},
     {key: 'zip_int', value: 30303},
     {key: 'model_bin', value: 'person'}
+    {key: 'favorite_foods_bin', value: 'pizza'}
+    {key: 'favorite_foods_bin', value: 'fried chicken'}
+    {key: 'favorite_foods_bin', value: 'applesauce'}
+    {key: 'favorite_foods_bin', value: 'cake'}
 ]
 
 ```
@@ -137,7 +143,7 @@ whose definition indicates that it's an index field
                             (Array.isArray(self[field]) && self[field] || self[field].split(',')).forEach(function (value) {
                                 payload.push({
                                     key: field + (def.integer ? '_int' : '_bin'),
-                                    value: value
+                                    value: (typeof value === 'string') ? value.trim() : value
                                 });
                             });
                         }
