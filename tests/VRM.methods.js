@@ -66,10 +66,10 @@ module.exports = {
                 test.done();
             });
         },
-        "#all returns an EventEmitter": function (test) {
-            var EventEmitter = require('events').EventEmitter;
-            test.ok(this.model.all() instanceof EventEmitter);
-            test.ok(this.model.all(function () {}) instanceof EventEmitter);
+        "#all returns a readable Stream": function (test) {
+            var Readable = require('stream').Readable;
+            test.ok(this.model.all() instanceof Readable);
+            test.ok(this.model.all(function () {}) instanceof Readable);
             test.done();
         },
         "#find calls all with cb moved to front of args": function (test) {
