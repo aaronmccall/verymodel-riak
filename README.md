@@ -3,7 +3,7 @@
 Riak extensions for VeryModel
 
 - Author: Aaron McCall <aaron@andyet.net>
-- Version: 0.7.0
+- Version: 0.8.0
 - License: MIT
 
 ## Examples
@@ -97,10 +97,9 @@ myInstance.value will return:
 ## Defaults
 
 ```javascript
-var _       = require('underscore');
-var async = require('async');
-var EventEmitter = require('events').EventEmitter;
-var request = require('./request_helpers.js');
+var _               = require('underscore');
+var request         = require('./request_helpers.js');
+var AllStream       = require('./stream').AllStream;
 
 module.exports = {
 ```
@@ -257,9 +256,10 @@ static ensures that the default value is not overwritten
 
 ```
 
-**all**: Returns all instances of this model that are stored in Riak
-The only required argument is a callback (or true, if you want a stream). Any additional arguments
-will be passed to getRequest.
+**all**: Streams or calls back with all instances of this model that are stored in Riak
+or an index-filtered set of them, depending on whether filtering args are passed.
+If the first argument is a function, it will be called with the result.
+If 
 
 ```javascript
         all: function () {
@@ -269,48 +269,20 @@ will be passed to getRequest.
                 cb = !streaming ? args[0] : null,
                 allKey = this.getAllKey(),
                 requestArgs = ['index'],
-                request = this.getRequest.apply(this, requestArgs.concat(_.rest(args, (streaming ? 0 : 1)))),
-                proxy = new EventEmitter(),
-                instances = [], loading, riakDone;
+                request = this.getRequest.apply(this, requestArgs.concat(_.rest(args, (streaming ? 0 : 1))));
 ```
 
 If we're streaming, this will return the readable stream
 
 ```javascript
             var stream = this.getClient().getIndex(request, true);
+```
 
-            stream.on('data', function dataHandler(reply) {
-                loading = true;
-                if (reply && reply.continuation) self.continuation = reply.continuation;
-                async.each(reply.keys, function (key, done) {
-                    self.load(key, function (err, instance) {
-                        if (!streaming) {
-                            instances.push(instance);
-                            return done();
-                        }
-                        proxy.emit('data', instances);
-                        instances = [];
-                        done();
-                    });
-                }, function (err) {
-                    loading = false;
-                    if (riakDone) {
-                        if (cb) return cb(null, instances);
-                        proxy.emit('end');
-                    }
-                });
-                
-            });
-            stream.on('error', function errorHandler(err) {
-                if (!streaming) return cb(err, instances);
-                proxy.emit('error', err);
-            });
-            stream.on('end', function endHandler () {
-                riakDone = true;
-                if (!streaming && !loading) return cb(null, instances), cb = null;
-            });
+All stream handling is done via a Transform stream
 
-            return proxy;
+```javascript
+            return stream.pipe(new AllStream({model: self, callback: cb}));
+
         },
 ```
 
