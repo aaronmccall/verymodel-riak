@@ -1,10 +1,12 @@
 # verymodel-riak
 
-Riak extensions for VeryModel
+## Riak extensions for VeryModel
 
 - Author: Aaron McCall <aaron@andyet.net>
 - Version: 0.8.0
 - License: MIT
+
+[![Code Climate](https://codeclimate.com/github/aaronmccall/verymodel-riak.png)](https://codeclimate.com/github/aaronmccall/verymodel-riak)
 
 ## Examples
 
@@ -275,7 +277,7 @@ If
 If we're streaming, this will return the readable stream
 
 ```javascript
-            var stream = this.getClient().getIndex(request, true);
+            var stream = this.getClient().getIndex(request);
 ```
 
 All stream handling is done via a Transform stream
