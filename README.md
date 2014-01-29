@@ -270,7 +270,6 @@ static ensures that the default value is not overwritten
 **all**: Streams or calls back with all instances of this model that are stored in Riak
 or an index-filtered set of them, depending on whether filtering args are passed.
 If the first argument is a function, it will be called with the result.
-If 
 
 ```javascript
         all: function () {
@@ -278,7 +277,6 @@ If
                 args = _.rest(arguments, 0),
                 streaming = typeof args[0] !== 'function',
                 cb = !streaming ? args[0] : null,
-                allKey = this.getAllKey(),
                 requestArgs = ['index'],
                 request = this.getRequest.apply(this, requestArgs.concat(_.rest(args, (streaming ? 0 : 1))));
 ```
@@ -406,7 +404,7 @@ Override default toJSON method to make more Hapi compatible
 
 ```javascript
         remove: function (id, cb) {
-            this.getClient().del(this.getRequest('del', id), function (err, reply) {
+            this.getClient().del(this.getRequest('del', id), function (err) {
                 cb(err);
             });
         }
