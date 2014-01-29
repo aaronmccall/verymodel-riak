@@ -25,13 +25,10 @@ async.each(docs, function (file, done) {
         done();
     });
 }, function (err) {
+    if (err) {
+        console.error(err);
+    }
     md.unshift(header.trim());
     md.push(footer.trim());
     fs.writeFileSync(__dirname + '/README.md', md.join('\n\n'));
 });
-// async.waterfall([
-//     function (cb) {
-//         fs.readDir()
-//         cb(null, files);
-//     }
-// ], function (err, result) {}); 

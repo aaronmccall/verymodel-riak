@@ -9,18 +9,20 @@ var def         = fixtures.def,
 
 var client = options.client = riak.init(fixtures.riak);
 
+function setup(cb) {
+    this.model = new veryriak.VeryRiakModel(def, options);
+    this.instance = this.model.create(data[0]);
+    client.resetCalls();
+    cb();
+}
+
 module.exports = {
     model: {
-        setUp: function (cb) {
-            this.model = new veryriak.VeryRiakModel(def, options);
-            this.instance = this.model.create(data[0]);
-            client.resetCalls();
-            cb();
-        },
+        setUp: setup,
         "#all calls riak.getIndex": function (test) {
             test.expect(2);
             test.ok(this.model.getAllKey(), 'model does not have a valid allKey');
-            this.model.all(function (err, list) {
+            this.model.all(function () {
                 test.ok(client.getCalls('getIndex').length, 'getIndex was not called');
                 test.done();
             });
@@ -87,7 +89,6 @@ module.exports = {
         },
         "#find simply proxies #all when no callback is supplied": function (test) {
             var oldAll = this.model.all,
-                fn = function () {},
                 findArgs = ['index', 'key'];
             this.model.all = function () {
                 var args = _.rest(arguments, 0);
@@ -140,12 +141,7 @@ module.exports = {
         }
     },
     instance: {
-        setUp: function (cb) {
-            this.model = new veryriak.VeryRiakModel(def, options);
-            this.instance = this.model.create(data[0]);
-            client.resetCalls();
-            cb();
-        },
+        setUp: setup,
         "#save calls riak.put twice when there are siblings": function (test) {
             test.expect(1);
             this.instance.save(function () {

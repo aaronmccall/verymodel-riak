@@ -65,6 +65,9 @@ var myInstance = MyModel.create({
     favorite_foods: ['pizza', 'fried chicken', 'applesauce', 'cake']
 });
 
+
+myInstance.save(); // stores the instance's data to Riak
+
 ```
 
 myInstance.indexes will return:
@@ -134,14 +137,18 @@ whose definition indicates that it's an index field
 ```javascript
                 Object.keys(defs).forEach(function (field) {
                     var def = defs[field];
-                    if (!def || !def.index) return;
+                    if (!def || !def.index) {
+                        return;
+                    }
 ```
 
 If def.index is a function, use it to derive an index value
 
 ```javascript
                     var value = (typeof def.index === 'function') ? def.index.call(self, self[field]) : self[field];
-                    if (typeof value === 'undefined') return;
+                    if (typeof value === 'undefined') {
+                        return;
+                    }
 ```
 
 If we aren't expecting a multiple values, set a single key/value pair
@@ -213,7 +220,9 @@ static ensures that the default value is not overwritten
 ```javascript
                 allKeyIsValid = allKeyDef && (allKeyDef.default && allKeyDef.required &&
                                 allKeyDef.private && allKeyDef.static);
-            if (allKeyDef && allKeyIsValid) return { key: this.options.allKey + '_bin', def: allKeyDef};
+            if (allKeyDef && allKeyIsValid) {
+                return { key: this.options.allKey + '_bin', def: allKeyDef};
+            }
         },
 ```
 
@@ -298,7 +307,9 @@ All stream handling is done via a Transform stream
             var args = _.rest(arguments, 0),
                 hasCb = typeof _.last(args) === 'function',
                 cb = hasCb && args.pop();
-            if (cb) args.unshift(cb);
+            if (cb) {
+                args.unshift(cb);
+            }
             return this.all.apply(this, args);
         },
 
@@ -342,7 +353,9 @@ Put the values back into a single field as an array
 
 ```javascript
         replyToData: function (reply) {
-            if (!reply || !reply.content) return {};
+            if (!reply || !reply.content) {
+                return {};
+            }
             var content = (reply.content.length > 1) ? this.options.resolveSiblings(reply.content) : reply.content[0];
 ```
 
@@ -351,8 +364,12 @@ reformat our data for VeryModel
 ```javascript
             var indexes = this.indexesToData(content.indexes);
             var data = _.extend(content.value, indexes);
-            if (reply.key) data[this.options.keyField] = reply.key;
-            if (reply.vclock) data.vclock = reply.vclock;
+            if (reply.key) {
+                data[this.options.keyField] = reply.key;
+            }
+            if (reply.vclock) {
+                data.vclock = reply.vclock;
+            }
             return data;
         },
 ```
@@ -378,7 +395,9 @@ Resolve siblings, if necessary, or just grab our content
 Override default toJSON method to make more Hapi compatible
 
 ```javascript
-                if (typeof cb === 'function') cb(null, instance);
+                if (typeof cb === 'function') {
+                    cb(null, instance);
+                }
             });
         },
 ```
@@ -449,8 +468,12 @@ Override default toJSON method to make more Hapi compatible
                 },
                 return_body: true
             };
-            if (this.id) payload.key = this.id;
-            if (this.vclock) payload.vclock = this.vclock;
+            if (this.id) {
+                payload.key = this.id;
+            }
+            if (this.vclock) {
+                payload.vclock = this.vclock;
+            }
             return payload;
         },
 ```
@@ -474,7 +497,9 @@ reply.content.length continues to be > 1
 ```javascript
                     this.save(true);
                 }
-                if (typeof cb === 'function') cb(err);
+                if (typeof cb === 'function') {
+                    cb(err);
+                }
             }.bind(this));
         },
 ```

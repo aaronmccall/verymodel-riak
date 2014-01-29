@@ -35,6 +35,9 @@ var myInstance = MyModel.create({
     favorite_foods: ['pizza', 'fried chicken', 'applesauce', 'cake']
 });
 
+
+myInstance.save(); // stores the instance's data to Riak
+
 /*
 myInstance.indexes will return:
 ```javascript
