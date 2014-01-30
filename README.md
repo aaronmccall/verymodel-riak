@@ -3,7 +3,7 @@
 ## Riak extensions for VeryModel
 
 - Author: Aaron McCall <aaron@andyet.net>
-- Version: 0.8.0
+- Version: 0.9.0
 - License: MIT
 
 [![Code Climate](https://codeclimate.com/github/aaronmccall/verymodel-riak.png)](https://codeclimate.com/github/aaronmccall/verymodel-riak)
@@ -102,9 +102,9 @@ myInstance.value will return:
 ## Defaults
 
 ```javascript
-var _               = require('underscore');
-var request         = require('./request_helpers.js');
-var AllStream       = require('./stream').AllStream;
+var _       = require('underscore');
+var request = require('./request_helpers.js');
+var streams = require('./streams');
 
 module.exports = {
 ```
@@ -264,7 +264,22 @@ static ensures that the default value is not overwritten
             }
             return request[type](this, _.rest(arguments));
         },
+```
 
+**_indexQuery**: Index query wrapper that returns a stream
+
+```javascript
+        _indexQuery: function () {
+            var args = _.rest(arguments, 0);
+            args.unshift('index');
+            var request = this.getRequest.apply(this, args);
+```
+
+Return the readable stream
+
+```javascript
+            return this.getClient().getIndex(request);
+        },
 ```
 
 **all**: Streams or calls back with all instances of this model that are stored in Riak
@@ -273,25 +288,20 @@ If the first argument is a function, it will be called with the result.
 
 ```javascript
         all: function () {
-            var self = this,
-                args = _.rest(arguments, 0),
+            var args = _.rest(arguments, 0),
                 streaming = typeof args[0] !== 'function',
                 cb = !streaming ? args[0] : null,
-                requestArgs = ['index'],
-                request = this.getRequest.apply(this, requestArgs.concat(_.rest(args, (streaming ? 0 : 1))));
+                requestArgs = _.rest(args, (streaming ? 0 : 1));
+
 ```
 
-If we're streaming, this will return the readable stream
+All stream handling is done via a Transform stream that
+receives our key stream and transmits instances
 
 ```javascript
-            var stream = this.getClient().getIndex(request);
-```
-
-All stream handling is done via a Transform stream
-
-```javascript
-            return stream.pipe(new AllStream({model: self, callback: cb}));
-
+            var stream = this._indexQuery.apply(this, requestArgs);
+            return stream.pipe(new streams.KeyToValueStream({model: this}))
+                         .pipe(new streams.InstanceStream({model: this, callback: cb}));
         },
 ```
 
@@ -339,7 +349,7 @@ Put the values back into a single field as an array
 
 ```javascript
                         if (!payload[field]) payload[field] = [];
-                        payload[field].push(index.value);
+                        payload[field].push(def.integer ? parseInt(index.value, 10) : index.value);
                     }
                 }
             });
@@ -370,6 +380,19 @@ reformat our data for VeryModel
             }
             return data;
         },
+        _getQuery: function (id, cb) {
+            this.getClient().get(this.getRequest('get', id), cb);
+        },
+        _getInstance: function (id, reply) {
+```
+
+Resolve siblings, if necessary, or just grab our content
+
+```javascript
+            var data = this.replyToData(reply);
+            data[this.options.keyField] = id;
+            return this.create(data);
+        },
 ```
 
 **load**: Load an object's data from Riak and creates a model instance from it.
@@ -377,24 +400,16 @@ reformat our data for VeryModel
 ```javascript
         load: function (id, cb) {
             var self = this;
-            this.getClient().get(this.getRequest('get', id), function (err, reply) {
+            this._getQuery(id, function (err, reply) {
                 if (err) return cb(err);
-```
-
-Resolve siblings, if necessary, or just grab our content
-
-```javascript
-                var data = self.replyToData(reply);
-                data[self.options.keyField] = id;
-                var instance = self.create(data);
-                self.last = instance;
+                self._last = self._getInstance(id, reply);
 ```
 
 Override default toJSON method to make more Hapi compatible
 
 ```javascript
                 if (typeof cb === 'function') {
-                    cb(null, instance);
+                    cb(null, self._last);
                 }
             });
         },
