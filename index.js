@@ -1,6 +1,7 @@
-var VeryModel = require('verymodel').VeryModel;
-var _ = require('underscore');
-var defaults = require('./lib/defaults.js');
+var VeryModel   = require('verymodel').VeryModel;
+var _           = require('underscore');
+var defaults    = require('./lib/defaults');
+var streams     = require('./lib/streams');
 
 function VeryRiakModel(definition, options) {
     VeryModel.call(this, definition, options);
@@ -80,7 +81,8 @@ function addIndexes(model) {
 
 
 module.exports = {
-    VeryRiakModel: VeryRiakModel,
-    riakifyModel: riakifyModel,
-    defaults: defaults
+    VeryRiakModel   : VeryRiakModel,
+    riakifyModel    : riakifyModel,
+    defaults        : defaults,
+    streams         : streams
 };

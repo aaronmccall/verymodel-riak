@@ -16,9 +16,8 @@ function setup(cb) {
     cb();
 }
 
-module.exports = {
+var suite = module.exports = {
     model: {
-        setUp: setup,
         "#all calls riak.getIndex": function (test) {
             test.expect(2);
             test.ok(this.model.getAllKey(), 'model does not have a valid allKey');
@@ -141,7 +140,6 @@ module.exports = {
         }
     },
     instance: {
-        setUp: setup,
         "#save calls riak.put twice when there are siblings": function (test) {
             test.expect(1);
             this.instance.save(function () {
@@ -165,9 +163,6 @@ module.exports = {
         },
     }
 };
-/*
-function (test) {
 
-            test.done();
-        }
-*/
+suite.model.setUp = setup;
+suite.instance.setUp = setup;
