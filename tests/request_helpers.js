@@ -11,8 +11,7 @@ module.exports = {
     'equivalent get calls return properly': function (test) {
         var key = 'foobarbazbiz';
         test.ok(
-            _.isEqual(helpers.get(this.model, [key]), helpers.get(this.model, [{key: key}])),
-            'strings and str_and_obj are NOT the same'
+            _.isEqual(helpers.get(this.model, [key]), helpers.get(this.model, [{key: key}]))
         );
         test.done();
     },
@@ -23,8 +22,7 @@ module.exports = {
             _.isEqual(
                 helpers.index(this.model, [index, key]),
                 helpers.index(this.model, [{index: index, key: key}])
-            ),
-            'strings and str_and_obj are NOT the same'
+            )
         );
         test.done();
     },
@@ -36,20 +34,18 @@ module.exports = {
             _.isEqual(
                 helpers.index(this.model, [index, min, max]),
                 helpers.index(this.model, [{index: index, range_min: min, range_max: max}])
-            ),
-            'strings and str_and_obj are NOT the same'
+            )
         );
         test.done();
     },
     "equivalent search calls return properly": function (test) {
-        var index = 'foobar',
+        var lookIn = 'foobar',
             q = 'name:bazbiz';
         test.ok(
             _.isEqual(
-                helpers.search(this.model, [index, q]),
-                helpers.search(this.model, [{index: index, q: q}])
-            ),
-            'strings and str_and_obj are NOT the same'
+                helpers.search(this.model, [lookIn, q]),
+                helpers.search(this.model, [{index: lookIn, q: q}])
+            )
         );
         test.done();
     },
@@ -61,8 +57,7 @@ module.exports = {
             _.isEqual(
                 helpers.mapreduce(this.model, [index, key, query]),
                 helpers.mapreduce(this.model, [{ inputs: { index: index, key: key}, query: query}])
-            ),
-            'strings and str_and_obj are NOT the same'
+            )
         );
         test.done();
     },
@@ -72,8 +67,7 @@ module.exports = {
             _.isEqual(
                 helpers.del(this.model, [key]),
                 helpers.del(this.model, [{key: key}])
-            ),
-            'strings and str_and_obj are NOT the same'
+            )
         );
         test.done();
     }

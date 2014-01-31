@@ -36,7 +36,7 @@ module.exports = {
         this.model.getRequest('get', {key: key});
         this.model.getRequest({type: 'get', options: {key: key}});
         test.equal(calls.get.length, 2);
-        test.ok(_.isEqual(calls.get[0], calls.get[1]), 'str_and_obj and obj_only are NOT the same');
+        test.ok(_.isEqual(calls.get[0], calls.get[1]));
         test.done();
     },
     "object-only index exact match calls are translated properly": function (test) {
@@ -44,7 +44,7 @@ module.exports = {
             key = 'bazbiz';
         this.model.getRequest('index', {index: index, key: key});
         this.model.getRequest({type: 'index', options: {index: index, key: key}});
-        test.ok(_.isEqual(calls.index[0], calls.index[1]), 'str_and_obj and obj_only are NOT the same');
+        test.ok(_.isEqual(calls.index[0], calls.index[1]));
         test.done();
     },
     "object-only index range calls are translated properly": function (test) {
@@ -54,7 +54,7 @@ module.exports = {
         this.model.getRequest('index', {index: index, range_min: min, range_max: max});
         this.model.getRequest({type: 'index', options: {index: index, range_min: min, range_max: max}});
         test.equal(calls.index.length, 2);
-        test.ok(_.isEqual(calls.index[0], calls.index[1]), 'str_and_obj and obj_only are NOT the same');
+        test.ok(_.isEqual(calls.index[0], calls.index[1]));
         test.done();
     },
     "object-only search calls are translated properly": function (test) {
@@ -63,7 +63,7 @@ module.exports = {
         this.model.getRequest('search', {index: index, q: q});
         this.model.getRequest({type: 'search', options: {index: index, q: q}});
         test.equal(calls.search.length, 2);
-        test.ok(_.isEqual(calls.search[0], calls.search[1]), 'str_and_obj and obj_only are NOT the same');
+        test.ok(_.isEqual(calls.search[0], calls.search[1]));
         test.done();
     },
     "object-only mapreduce calls are translated properly": function (test) {
@@ -79,15 +79,15 @@ module.exports = {
                 }
             });
         test.equal(calls.mapreduce.length, 2);
-        test.ok(_.isEqual(calls.mapreduce[0], calls.mapreduce[1]), 'str_and_obj and obj_only are NOT the same');
+        test.ok(_.isEqual(calls.mapreduce[0], calls.mapreduce[1]));
         test.done();
     },
     "object-only del calls are translated properly": function (test) {
-        var key = 'foobarbazbiz';
-        this.model.getRequest('del', {key: key});
-        this.model.getRequest({type: 'del', options: {key: key}});
+        var id = 'foobarbazbiz';
+        this.model.getRequest('del', {key: id});
+        this.model.getRequest({type: 'del', options: {key: id}});
         test.equal(calls.del.length, 2);
-        test.ok(_.isEqual(calls.del[0], calls.del[1]), 'str_and_obj and obj_only are NOT the same');
+        test.ok(_.isEqual(calls.del[0], calls.del[1]));
         test.done();
     }
 };
