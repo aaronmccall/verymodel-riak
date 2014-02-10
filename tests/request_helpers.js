@@ -3,72 +3,54 @@ var fixtures = require('../lib/fixtures');
 var veryriak    = require('../');
 var helpers = require('../lib/request_helpers');
 
+function keyTest(type, test) {
+    var key = 'foobarbazbiz';
+    test.ok(_.isEqual(
+        helpers[type](this.model, [key]),
+        helpers[type](this.model, [{key: key}])
+    ));
+    test.done();
+}
+
+function twoArgTest(type, first, second, test) {
+    var keyName = (type==='index') ? 'key' : 'q',
+        options = {index: first};
+    options[keyName] = second;
+    test.ok(_.isEqual(
+        helpers[type](this.model, [first, second]),
+        helpers[type](this.model, [options])
+    ));
+    test.done();
+}
+
+function threeArgTest(type, one, two, three, test) {
+    var lastKey = (type==='index') ? 'range_max' : 'query',
+        options = {};
+    if (type==='index') {
+        options.index = one;
+        options.range_min = two;
+    } else {
+        options.inputs = {};
+        options.inputs.index = one;
+        options.inputs.key = two;
+    }
+    options[lastKey] = three;
+    test.ok(_.isEqual(
+        helpers[type](this.model, [one, two, three]),
+        helpers[type](this.model, [options])
+    ));
+    test.done();
+}
+
 module.exports = {
     setUp: function (cb) {
         this.model = new veryriak.VeryRiakModel(fixtures.def, fixtures.options);
         cb();
     },
-    'equivalent get calls return properly': function (test) {
-        var key = 'foobarbazbiz';
-        test.ok(
-            _.isEqual(helpers.get(this.model, [key]), helpers.get(this.model, [{key: key}]))
-        );
-        test.done();
-    },
-    "equivalent index exact match calls return properly": function (test) {
-        var index = 'subject',
-            key = 'math:algebra';
-        test.ok(
-            _.isEqual(
-                helpers.index(this.model, [index, key]),
-                helpers.index(this.model, [{index: index, key: key}])
-            )
-        );
-        test.done();
-    },
-    "equivalent index range calls return properly": function (test) {
-        var index = 'grade_level',
-            min = 1,
-            max = 5;
-        test.ok(
-            _.isEqual(
-                helpers.index(this.model, [index, min, max]),
-                helpers.index(this.model, [{index: index, range_min: min, range_max: max}])
-            )
-        );
-        test.done();
-    },
-    "equivalent search calls return properly": function (test) {
-        var lookIn = 'foobar',
-            q = 'name:bazbiz';
-        test.ok(
-            _.isEqual(
-                helpers.search(this.model, [lookIn, q]),
-                helpers.search(this.model, [{index: lookIn, q: q}])
-            )
-        );
-        test.done();
-    },
-    "equivalent mapreduce calls return properly": function (test) {
-        var index = 'foobar',
-            key = 'bazbiz',
-            query = [];
-        test.ok(
-            _.isEqual(
-                helpers.mapreduce(this.model, [index, key, query]),
-                helpers.mapreduce(this.model, [{ inputs: { index: index, key: key}, query: query}])
-            )
-        );
-        test.done();
-    },
-    "equivalent del calls return properly": function (test) {
-        var key = 'foobarbazbiz';
-        test.ok(
-            _.isEqual(
-                helpers.del(this.model, [key]),
-                helpers.del(this.model, [{key: key}])
-            )
-        );
-        test.done();
-    }
+    'equivalent get calls return properly': _.partial(keyTest, 'get'),
+    "equivalent index exact match calls return properly": _.partial(twoArgTest, 'index', 'subjects', 'math:algebra'),
+    "equivalent index range calls return properly": _.partial(threeArgTest, 'index', 'grade_level', 1, 5),
+    "equivalent search calls return properly": _.partial(twoArgTest, 'search', 'subjects', 'science:biology'),
+    "equivalent mapreduce calls return properly": _.partial(threeArgTest, 'mapreduce', 'foobar', 'bazbiz', []),
+    "equivalent del calls return properly": _.partial(keyTest, 'del')
 };

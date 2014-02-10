@@ -226,11 +226,13 @@ static ensures that the default value is not overwritten
         },
 ```
 
-**getBucket**: Returns default bucket
+**getBucket**: Returns default bucket optionally appending an additional namespace
 
 ```javascript
-        getBucket: function () {
-            if (this.options.bucket) return this.options.bucket;
+        getBucket: function (append) {
+            var bucket = this.options.bucket;
+            if (bucket && !append) return bucket;
+            if (bucket && append) return [bucket, append].join(this.options.namespaceSeparator||"::");
             throw new Error('Please set a Riak bucket via options.bucket');
         },
 
@@ -473,7 +475,7 @@ Override default toJSON method to make more Hapi compatible
 ```javascript
         prepare: function () {
             var payload = {
-                bucket: this.bucket || this.__verymeta.model.getBucket(),
+                bucket: this.getBucket(),
                 content: {
                     indexes: this.indexes,
                     value: JSON.stringify(this.value),
@@ -520,7 +522,16 @@ reply.content.length continues to be > 1
 **getClient**: Proxy method to get the Riak client from model
 
 ```javascript
-        getClient: function () { return this.__verymeta.model.getClient(); }
+        getClient: function () { return this.__verymeta.model.getClient(); },
+
+```
+
+**getBucket**: return instance-level bucket property or fall back to model's getBucket
+
+```javascript
+        getBucket: function () {
+            return (typeof this.bucket !== undefined) ? this.bucket : this.__verymeta.model.getBucket();
+        }
     }
 };
 ```
