@@ -127,6 +127,15 @@ var suite = module.exports = {
                 test.done();
             });
         },
+        "#load with bucket sets bucket on instance": function (test) {
+            var self = this;
+            test.expect(2);
+            this.model.load(data[1].id, 'bifbafbof', function (err, reply) {
+                test.equal(reply.bucket, 'bifbafbof');
+                test.notEqual(reply.bucket, self.model.getBucket());
+                test.done();
+            });
+        },
         "#remove calls riak.del": function (test) {
             test.expect(1);
             this.model.remove(this.instance.id, function () {

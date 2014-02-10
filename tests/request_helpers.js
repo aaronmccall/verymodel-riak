@@ -48,6 +48,11 @@ module.exports = {
         cb();
     },
     'equivalent get calls return properly': _.partial(keyTest, 'get'),
+    'get can take an optional bucket argument': function (test) {
+        var result = helpers.get(this.model, ['fibfab', 'jibberjabber']);
+        test.equal(result.bucket, 'jibberjabber');
+        test.done();
+    },
     "equivalent index exact match calls return properly": _.partial(twoArgTest, 'index', 'subjects', 'math:algebra'),
     "equivalent index range calls return properly": _.partial(threeArgTest, 'index', 'grade_level', 1, 5),
     "equivalent search calls return properly": _.partial(twoArgTest, 'search', 'subjects', 'science:biology'),

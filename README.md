@@ -382,10 +382,16 @@ reformat our data for VeryModel
             }
             return data;
         },
-        _getQuery: function (id, cb) {
-            this.getClient().get(this.getRequest('get', id), cb);
+        _getQuery: function (id, bucket, cb) {
+            var reqArgs = ['get', id];
+            if (typeof bucket === 'function' && typeof cb === 'undefined') {
+                cb = bucket;
+                bucket = undefined;
+            }
+            if (bucket) reqArgs.push(bucket);
+            this.getClient().get(this.getRequest.apply(this, reqArgs), cb);
         },
-        _getInstance: function (id, reply) {
+        _getInstance: function (id, reply, bucket) {
 ```
 
 Resolve siblings, if necessary, or just grab our content
@@ -393,18 +399,25 @@ Resolve siblings, if necessary, or just grab our content
 ```javascript
             var data = this.replyToData(reply);
             data[this.options.keyField] = id;
-            return this.create(data);
+            if (bucket && this.definition.bucket) data.bucket = bucket;
+            var instance = this.create(data);
+            if (bucket && !instance.bucket) instance.bucket = bucket;
+            return instance;
         },
 ```
 
 **load**: Load an object's data from Riak and creates a model instance from it.
 
 ```javascript
-        load: function (id, cb) {
+        load: function (id, bucket, cb) {
             var self = this;
-            this._getQuery(id, function (err, reply) {
+            if (typeof bucket === 'function' && typeof cb === 'undefined') {
+                cb = bucket;
+                bucket = undefined;
+            }
+            this._getQuery(id, bucket, function (err, reply) {
                 if (err) return cb(err);
-                self._last = self._getInstance(id, reply);
+                self._last = self._getInstance(id, reply, bucket);
 ```
 
 Override default toJSON method to make more Hapi compatible
@@ -420,8 +433,12 @@ Override default toJSON method to make more Hapi compatible
 **remove**: Remove an instance from Riak
 
 ```javascript
-        remove: function (id, cb) {
-            this.getClient().del(this.getRequest('del', id), function (err) {
+        remove: function (id, bucket, cb) {
+            if (typeof bucket === 'function' && typeof cb === 'undefined') {
+                cb = bucket;
+                bucket = undefined;
+            }
+            this.getClient().del(this.getRequest('del', id, bucket), function (err) {
                 cb(err);
             });
         }
