@@ -3,7 +3,7 @@
 ## Riak extensions for VeryModel
 
 - Author: Aaron McCall <aaron@andyet.net>
-- Version: 0.9.2
+- Version: 0.9.3
 - License: MIT
 
 [![Code Climate](https://codeclimate.com/github/aaronmccall/verymodel-riak.png)](https://codeclimate.com/github/aaronmccall/verymodel-riak)
