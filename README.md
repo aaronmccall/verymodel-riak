@@ -547,7 +547,7 @@ reply.content.length continues to be > 1
 
 ```javascript
         getBucket: function () {
-            return (typeof this.bucket !== undefined) ? this.bucket : this.__verymeta.model.getBucket();
+            return (typeof this.bucket !== 'undefined') ? this.bucket : this.__verymeta.model.getBucket();
         }
     }
 };
