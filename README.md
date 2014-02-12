@@ -3,7 +3,7 @@
 ## Riak extensions for VeryModel
 
 - Author: Aaron McCall <aaron@andyet.net>
-- Version: 0.9.3
+- Version: 0.9.4
 - License: MIT
 
 [![Code Climate](https://codeclimate.com/github/aaronmccall/verymodel-riak.png)](https://codeclimate.com/github/aaronmccall/verymodel-riak)
@@ -293,17 +293,21 @@ If the first argument is a function, it will be called with the result.
             var args = _.rest(arguments, 0),
                 streaming = typeof args[0] !== 'function',
                 cb = !streaming ? args[0] : null,
-                requestArgs = _.rest(args, (streaming ? 0 : 1));
-
+                requestArgs = _.rest(args, (streaming ? 0 : 1)),
+                bucket;
+            if (args.length > 1 && typeof args[1] === 'object') {
+                bucket = args[1].bucket;
+            }
 ```
 
 All stream handling is done via a Transform stream that
 receives our key stream and transmits instances
 
 ```javascript
-            var stream = this._indexQuery.apply(this, requestArgs);
-            return stream.pipe(new streams.KeyToValueStream({model: this}))
-                         .pipe(new streams.InstanceStream({model: this, callback: cb}));
+            var stream = this._indexQuery.apply(this, requestArgs),
+                streamOpts = {model: this, bucket: bucket};
+            return stream.pipe(new streams.KeyToValueStream(_.defaults({}, streamOpts)))
+                         .pipe(new streams.InstanceStream(_.defaults({callback: cb}, streamOpts)));
         },
 ```
 
