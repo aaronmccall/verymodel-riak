@@ -32,12 +32,11 @@ module.exports = {
         cb();
     },
     "passing bucket to find/all changes bucket for streams too": function (test) {
-        var test_opts = {bucket: 'foo:bucket'};
+        var test_opts = {index: 'model_bin', key: 'person', bucket: 'foo:bucket'};
         test.expect(2);
         test.equal(this.model.getBucket(), options.bucket);
-        var stream = this.model.all(function (err, res) {
-
-        }, test_opts);
+        var stream = this.model.find(test_opts, function (err, res) {
+        });
         test.equal(stream._bucket, test_opts.bucket);
         test.done();
     }
