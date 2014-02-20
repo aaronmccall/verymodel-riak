@@ -2,6 +2,7 @@ var veryriak            = require('../');
 var _                   = require('underscore');
 var riak                = require('../lib/fakeriak');
 var request_helpers     = require('../lib/request_helpers');
+var streams             = require('../lib/streams');
 var fixtures            = require('../lib/fixtures');
 var options             = _.extend({client: riak.init(fixtures.riak)}, fixtures.options);
 
@@ -39,5 +40,35 @@ module.exports = {
         });
         test.equal(stream._bucket, test_opts.bucket);
         test.done();
+    },
+    "StreamOne emits data only once": function (test) {
+        var once = new streams.StreamOne(),
+            data = {},
+            calls = 0;
+        once.on('data', function (payload) {
+            test.equal(++calls, 1);
+            test.strictEqual(payload, data);
+        });
+        once.on('end', function (payload) {
+            test.strictEqual(payload, undefined);
+            test.done();
+        });
+        once.cb(null, data);
+        // the second call has no effect
+        once.cb(null, 'foo');
+    },
+    "StreamOne emits errors as error only once": function (test) {
+        var once = new streams.StreamOne(),
+            error = {},
+            calls = 0;
+        once.on('error', function (payload) {
+            test.equal(++calls, 1);
+            test.strictEqual(payload, error);
+            test.strictEqual(once._readableState.ended, true);
+            test.done();
+        });
+        once.cb(error);
+        // the second call has no effect
+        once.cb('foo');
     }
 };
