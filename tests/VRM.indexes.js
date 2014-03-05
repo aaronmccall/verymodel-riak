@@ -80,6 +80,16 @@ module.exports = {
         test.ok(_.isEqual(_.findWhere(indexes, {key: 'complex_bin'}), {key: 'complex_bin', value: 'foo:bar:baz'}));
         test.done();
     },
+    "index in definition can be a string index name": function (test) {
+        this.model.addDefinition({ foo: {index: 'bar', required: true, default: 'baz'}});
+        var instance = this.model.create(),
+            indexes = instance.indexes,
+            indexesToData = this.model.indexesToData(instance.indexes);
+        test.ok(_(indexes).findWhere({key: 'bar_bin', value: 'baz'}));
+        test.ok(_(indexesToData).has('foo'));
+        test.equal(indexesToData.foo, 'baz');
+        test.done();
+    },
     "multi-value indexes can be specified via isArray": function (test) {
         var model = new veryriak.VeryRiakModel({
             arr: {index: true, isArray: true}

@@ -10,6 +10,22 @@ function VeryRiakModel(definition, options) {
 
 VeryRiakModel.prototype = Object.create(VeryModel.prototype);
 
+var oldAddDefinition = VeryModel.prototype.addDefinition;
+function addDefinition(definition) {
+    oldAddDefinition.call(this, definition);
+    mapIndexes(this);
+}
+VeryRiakModel.prototype.addDefinition = addDefinition;
+
+function mapIndexes(model) {
+    _.each(model.definition, function (def, field) {
+        var indexes_to_fields = model.options.indexes_to_fields;
+        if (!indexes_to_fields) indexes_to_fields = (model.options.indexes_to_fields = {});
+        if (def.index && typeof def.index === 'string') {
+            indexes_to_fields[def.index] = field;
+        }
+    });
+}
 // Add Riak extensions to model factory
 function riakifyModel(model) {
     // Extend options with any default options that aren't already defined
