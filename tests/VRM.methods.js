@@ -1,4 +1,5 @@
 var _           = require('underscore');
+var bucker      = require('bucker');
 var riak        = require('../lib/fakeriak');
 var veryriak    = require('../');
 var fixtures    = require('../lib/fixtures');
@@ -6,7 +7,7 @@ var def         = fixtures.def,
     options     = fixtures.options,
     data        = fixtures.data,
     riak_data   = fixtures.riak.data;
-
+options.logger  = bucker.createLogger({console: true, name: 'tests.VRM.methods'}); 
 var client = options.client = riak.init(fixtures.riak);
 
 function setup(cb) {
