@@ -3,7 +3,7 @@
 ## Riak extensions for VeryModel
 
 - Author: Aaron McCall <aaron@andyet.net>
-- Version: 0.9.6
+- Version: 0.9.8
 - License: MIT
 
 [![Code Climate](https://codeclimate.com/github/aaronmccall/verymodel-riak.png)](https://codeclimate.com/github/aaronmccall/verymodel-riak)
@@ -146,6 +146,7 @@ If def.index is a function, use it to derive an index value
 
 ```javascript
                     var value = (typeof def.index === 'function') ? def.index.call(self, self[field]) : self[field];
+                    var idxName = (typeof def.index === 'string') ? def.index : field;
                     if (typeof value === 'undefined') {
                         return;
                     }
@@ -155,7 +156,7 @@ If we aren't expecting a multiple values, set a single key/value pair
 
 ```javascript
                     if (!def.isArray) return payload.push({
-                        key: field + (def.integer ? '_int' : '_bin'),
+                        key: (idxName.match(/(_int|_bin)$/) && idxName) || idxName + (def.integer ? '_int' : '_bin'),
                         value: value
                     });
 ```
@@ -184,12 +185,14 @@ CSV strings when appropriate
             derive: function () {
                 var model = this.__verymeta.model;
                 if (!model.options.values) model.options.values = _.compact(_.map(model.definition, function (def, key) {
+                    var isKeyField = key === model.options.keyField;
+                    var isAllKey = key === model.options.allKey;
 ```
 
 By default we'll use all of the public fields except id
 
 ```javascript
-                    return (def.private || key === model.options.keyField) ? false : key;
+                    return (def.private || isKeyField || isAllKey) ? false : key;
                 }));
                 return _.pick(this, model.options.values);
             }
@@ -218,8 +221,8 @@ private ensures it's not stored as part of the object's data
 static ensures that the default value is not overwritten
 
 ```javascript
-                allKeyIsValid = allKeyDef && (allKeyDef.default && allKeyDef.required &&
-                                allKeyDef.private && allKeyDef.static);
+                allKeyIsValid = allKeyDef && (allKeyDef.default &&
+                                allKeyDef.required && allKeyDef.static);
             if (allKeyDef && allKeyIsValid) {
                 return { key: this.options.allKey + '_bin', def: allKeyDef};
             }
@@ -231,9 +234,19 @@ static ensures that the default value is not overwritten
 ```javascript
         getBucket: function (append) {
             var bucket = this.options.bucket;
+            if (!bucket && this.options.riak) bucket = this.options.riak.bucket;
             if (bucket && !append) return bucket;
             if (bucket && append) return [bucket, append].join(this.options.namespaceSeparator||"::");
             throw new Error('Please set a Riak bucket via options.bucket');
+        },
+
+```
+
+**getLogger**: Returns specified logger if defined or creates one and returns it
+
+```javascript
+        getLogger: function _logger() {
+            return this.options.logger || (this.options.logger = require('bucker').createNullLogger());
         },
 
 ```
@@ -298,6 +311,8 @@ If the first argument is a function, it will be called with the result.
             if (args.length > 1 && typeof args[1] === 'object') {
                 bucket = args[1].bucket;
             }
+            var logger = this.getLogger();
+            logger.debug('query prepared: %j, streaming: %s', requestArgs, streaming);
 ```
 
 All stream handling is done via a Transform stream that
@@ -306,6 +321,7 @@ receives our key stream and transmits instances
 ```javascript
             var stream = this._indexQuery.apply(this, requestArgs),
                 streamOpts = {model: this, bucket: bucket};
+
             return stream.pipe(new streams.KeyToValueStream(_.defaults({}, streamOpts)))
                          .pipe(new streams.InstanceStream(_.defaults({callback: cb}, streamOpts)));
         },
@@ -335,12 +351,24 @@ receives our key stream and transmits instances
 ```javascript
         indexesToData: function (indexes) {
             var self = this,
-                payload = {};
+                payload = {},
+                allKey = self.getAllKey();
             if (!indexes) return payload;
             indexes.forEach(function (index) {
-                if (index.key !== self.getAllKey().key) {
-                    var field = index.key.replace(/(_bin|_int)$/, ''),
-                        def = self.definition[field];
+                var field,
+                    stripped = index.key.replace(/(_bin|_int)$/, '');
+                if (self.options.indexes_to_fields[index.key]) {
+                    field = self.options.indexes_to_fields[index.key];
+                }
+                if (!field && self.options.indexes_to_fields[stripped]) {
+                    field = self.options.indexes_to_fields[stripped];
+                }
+                if (!field) field = stripped;
+
+                var notAllKey = !allKey || index.key !== allKey.key;
+                var shouldConvert = (!self.options.values || !~self.options.values.indexOf(field));
+                if (notAllKey && shouldConvert) {
+                    var def = self.definition[field];
 ```
 
 If it isn't an array field, just pass the value through
@@ -376,7 +404,8 @@ Put the values back into a single field as an array
 reformat our data for VeryModel
 
 ```javascript
-            var indexes = this.indexesToData(content.indexes);
+            var indexes = {};
+            indexes = this.indexesToData(content.indexes);
             var data = _.extend(content.value, indexes);
             if (reply.key) {
                 data[this.options.keyField] = reply.key;
@@ -420,7 +449,7 @@ Resolve siblings, if necessary, or just grab our content
                 bucket = undefined;
             }
             this._getQuery(id, bucket, function (err, reply) {
-                if (err) return cb(err);
+                if (err||_.isEmpty(reply)) return cb(err||new Error('No matching key found.'));
                 self._last = self._getInstance(id, reply, bucket);
 ```
 
@@ -438,12 +467,16 @@ Override default toJSON method to make more Hapi compatible
 
 ```javascript
         remove: function (id, bucket, cb) {
+            var self = this;
             if (typeof bucket === 'function' && typeof cb === 'undefined') {
                 cb = bucket;
                 bucket = undefined;
             }
+            this.getLogger().debug('request to delete account(%s)', id);
             this.getClient().del(this.getRequest('del', id, bucket), function (err) {
-                cb(err);
+                if (err) return cb(err);
+                self.getLogger().debug('successfully deleted account');
+                cb();
             });
         }
     },
@@ -470,7 +503,7 @@ Override default toJSON method to make more Hapi compatible
 - pagination is on by default to prevent overloading the server
 
 ```javascript
-        max_results: 10,
+        max_results: 100,
         paginate: true,
 ```
 
@@ -495,13 +528,15 @@ Override default toJSON method to make more Hapi compatible
 
 ```javascript
         prepare: function () {
+            var content = {
+                value: JSON.stringify(this.value),
+                content_type: 'application/json'
+            };
+            var indexes = this.indexes;
+            if (indexes.length) content.indexes = indexes;
             var payload = {
+                content: content,
                 bucket: this.getBucket(),
-                content: {
-                    indexes: this.indexes,
-                    value: JSON.stringify(this.value),
-                    content_type: 'application/json'
-                },
                 return_body: true
             };
             if (this.id) {
@@ -518,25 +553,30 @@ Override default toJSON method to make more Hapi compatible
 
 ```javascript
         save: function (cb) {
-            this.getClient().put(this.prepare(), function (err, reply) {
+            var self = this;
+            var logger = this.getLogger();
+            var payload = this.prepare();
+            logger.debug('save payload: %j', payload);
+            this.getClient().put(payload, function (err, reply) {
+                logger.debug('riak put %s', (err == null ? 'succeeded' : ('failed: ' + err)));
                 if (!err) {
-                    if (!this.id && reply.key)  this.id = reply.key;
-                    if (reply.vclock) this.vclock = reply.vclock;
+                    if (!self.id && reply.key)  self.id = reply.key;
+                    if (reply.vclock) self.vclock = reply.vclock;
                 }
                 if (reply.content.length > 1 && typeof cb !== 'boolean') {
-                    this.loadData(this.__verymeta.model.replyToData(reply));
+                    self.loadData(self.__verymeta.model.replyToData(reply));
 ```
 
 The boolean arg prevents a race condition when
 reply.content.length continues to be > 1
 
 ```javascript
-                    this.save(true);
+                    self.save(true);
                 }
                 if (typeof cb === 'function') {
-                    cb(err);
+                    cb(err, self);
                 }
-            }.bind(this));
+            });
         },
 ```
 
@@ -552,9 +592,36 @@ reply.content.length continues to be > 1
 ```javascript
         getBucket: function () {
             return (typeof this.bucket !== 'undefined') ? this.bucket : this.__verymeta.model.getBucket();
+        },
+```
+
+**getLogger**: return this instance's logger (if defined) or fall back to model's getLogger
+
+```javascript
+        getLogger: function () {
+            return (typeof this.logger !== 'undefined') ? this.logger : this.__verymeta.model.getLogger();
         }
     }
 };
+
+```
+
+Add some logging
+
+```javascript
+var logify = function (obj, name) {
+    if (typeof obj[name] !== 'function') return;
+    var method = obj[name];
+    obj[name] = _.wrap(method, function (method) {
+        this.getLogger().debug('Function [%s]', name);
+        return method.apply(this, _.rest(_.toArray(arguments)));
+    });
+};
+['load', 'remove', 'find', 'all'].forEach(_.partial(logify, module.exports.methods));
+logify(module.exports.instanceMethods, 'save');
+logify(module.exports.instanceMethods, 'prepare');
+
+
 ```
 
 ## Acknowledgements
