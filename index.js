@@ -31,6 +31,16 @@ function riakifyModel(model) {
     // Extend options with any default options that aren't already defined
     _.defaults(model.options, defaults.options);
 
+    var opts = model.options;
+
+    if (!opts.client && opts.riak) {
+        opts.client = require('riakpbc').createClient(opts.riak);
+    }
+
+    if (!opts.logger && opts.loggerConfig) {
+        opts.logger = require('bucker').createLogger(opts.loggerConfig);
+    }
+
     addIndexes(model);
 
     // Set the Riak client
@@ -45,6 +55,7 @@ function riakifyModel(model) {
         throw new Error('Please set a Riak client via setClient or options.client');
     };
 
+    
     model.options.methods = _.defaults(model.options.methods||{}, defaults.methods);
     // Extend model with user supplied methods and/or with default methods
     // where a method of the same name is not already defined.
@@ -56,6 +67,7 @@ function riakifyModel(model) {
     // and apply them
     model.extendModel(model.options.instanceMethods);
 }
+
 
 function addIndexes(model) {
 
