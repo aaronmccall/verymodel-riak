@@ -1,6 +1,6 @@
 {
   "name": "verymodel-riak",
-  "version": "0.10.0",
+  "version": "0.10.1",
   "description": "Riak extensions for VeryModel",
   "main": "index.js",
   "scripts": {
