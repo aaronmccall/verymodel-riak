@@ -3,19 +3,21 @@ var VeryRiakModel = require('verymodel-riak').VeryRiakModel;
 // **Define our fields**
 var MyDef = {
     first_name: {},
+    last_name: { index: true },
     name: {
         private: true,
         derive: function () { return this.first_name + ' ' + this.last_name; }
     },
+    age: { index: { integer: true } },
+    gender: { index: true, private: true },
     city:           {},
-    state:          {index: true},
-    zip:            {index: true, integer: true},
-    model:          {default: 'person', required: true, private: true, static: true},
-    favorite_foods: {index: true, isArray: true }
+    state:          { index: true},
+    zip:            { index: { integer: true } },
+    model:          { default: 'person', required: true, private: true, static: true},
+    favorite_foods: { index: { isArray: true } }
 };
 // **Define our indexes**
 var MyOptions = {
-    indexes:    [['last_name', false, false], ['age', true], 'gender'],
     allKey:     'model',
     bucket:     "test:bucket"
 };

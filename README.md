@@ -21,15 +21,18 @@ var VeryRiakModel = require('verymodel-riak').VeryRiakModel;
 ```javascript
 var MyDef = {
     first_name: {},
+    last_name: { index: true },
     name: {
         private: true,
         derive: function () { return this.first_name + ' ' + this.last_name; }
     },
+    age: { index: { integer: true } },
+    gender: { index: true, private: true },
     city:           {},
-    state:          {index: true},
-    zip:            {index: true, integer: true},
-    model:          {default: 'person', required: true, private: true, static: true},
-    favorite_foods: {index: true, isArray: true }
+    state:          { index: true},
+    zip:            { index: { integer: true } },
+    model:          { default: 'person', required: true, private: true, static: true},
+    favorite_foods: { index: { isArray: true } }
 };
 ```
 
@@ -37,7 +40,6 @@ var MyDef = {
 
 ```javascript
 var MyOptions = {
-    indexes:    [['last_name', false, false], ['age', true], 'gender'],
     allKey:     'model',
     bucket:     "test:bucket"
 };
@@ -103,6 +105,7 @@ myInstance.value will return:
 
 ```javascript
 var _       = require('underscore');
+var indexes = require('./indexes');
 var request = require('./request_helpers.js');
 var streams = require('./streams');
 
@@ -125,55 +128,8 @@ module.exports = {
 
 ```javascript
         indexes: {
-            private: true, derive: function () {
-                var self = this,
-                    payload = [],
-                    defs = this.__verymeta.model.definition;
-```
-
-Push key/value object onto payload array for every field
-whose definition indicates that it's an index field
-
-```javascript
-                Object.keys(defs).forEach(function (field) {
-                    var def = defs[field];
-                    if (!def || !def.index) {
-                        return;
-                    }
-```
-
-If def.index is a function, use it to derive an index value
-
-```javascript
-                    var value = (typeof def.index === 'function') ? def.index.call(self, self[field]) : self[field];
-                    var idxName = (typeof def.index === 'string') ? def.index : field;
-                    if (typeof value === 'undefined') {
-                        return;
-                    }
-```
-
-If we aren't expecting a multiple values, set a single key/value pair
-
-```javascript
-                    if (!def.isArray) return payload.push({
-                        key: (idxName.match(/(_int|_bin)$/) && idxName) || idxName + (def.integer ? '_int' : '_bin'),
-                        value: value
-                    });
-```
-
-If we are expecting multiple values, set them, also splitting
-CSV strings when appropriate
-
-```javascript
-                    ((Array.isArray(value) && value) || (''+value).split(',')).forEach(function (value) {
-                        payload.push({
-                            key: field + (def.integer ? '_int' : '_bin'),
-                            value: (typeof value === 'string') ? value.trim() : value
-                        });
-                    });
-                });
-                return payload;
-            }
+            private: true,
+            derive: indexes.derive
         },
 ```
 
@@ -333,10 +289,14 @@ receives our key stream and transmits instances
   find({index: 'index', range_min: 'min', range_max: 'max'}, [function (err, instance)])
 
 ```javascript
-        find: function () {
-            var args = _.rest(arguments, 0),
+        find: function (index) {
+            var args = _.rest(arguments),
                 hasCb = typeof _.last(args) === 'function',
                 cb = hasCb && args.pop();
+            if (typeof index === 'string' && !index.match(/_(bin|int)$/)) {
+                index = indexes.getName(index, this.definition[index]);
+            }
+            args.unshift(index);
             if (cb) {
                 args.unshift(cb);
             }
@@ -349,52 +309,14 @@ receives our key stream and transmits instances
 **indexesToData**: Reformats indexes from Riak so that they can be applied to model instances
 
 ```javascript
-        indexesToData: function (indexes) {
-            var self = this,
-                payload = {},
-                allKey = self.getAllKey();
-            if (!indexes) return payload;
-            indexes.forEach(function (index) {
-                var field,
-                    stripped = index.key.replace(/(_bin|_int)$/, '');
-                if (self.options.indexes_to_fields[index.key]) {
-                    field = self.options.indexes_to_fields[index.key];
-                }
-                if (!field && self.options.indexes_to_fields[stripped]) {
-                    field = self.options.indexes_to_fields[stripped];
-                }
-                if (!field) field = stripped;
-
-                var notAllKey = !allKey || index.key !== allKey.key;
-                var shouldConvert = (!self.options.values || !~self.options.values.indexOf(field));
-                if (notAllKey && shouldConvert) {
-                    var def = self.definition[field];
-```
-
-If it isn't an array field, just pass the value through
-
-```javascript
-                    if (!def || !def.isArray) {
-                        payload[field] = index.value;
-                    } else {
-```
-
-Put the values back into a single field as an array
-
-```javascript
-                        if (!payload[field]) payload[field] = [];
-                        payload[field].push(def.integer ? parseInt(index.value, 10) : index.value);
-                    }
-                }
-            });
-            return payload;
-        },
+        indexesToData: indexes.rehydrate,
 ```
 
 **replyToData**: Reformats riak reply into the appropriate format to feed into an instance's loadData method
 
 ```javascript
         replyToData: function (reply) {
+            this.getLogger().debug('Function [replyToData]: %j', reply);
             if (!reply || !reply.content) {
                 return {};
             }

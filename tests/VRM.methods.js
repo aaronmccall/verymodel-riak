@@ -77,11 +77,11 @@ var suite = module.exports = {
         "#find calls all with cb moved to front of args": function (test) {
             var oldAll = this.model.all,
                 fn = function () {},
-                findArgs = ['index', 'key', fn];
+                findArgs = ['index_bin', 'key', fn];
             this.model.all = function () {
                 var args = _.rest(arguments);
                 test.equal(arguments[0], findArgs.pop());
-                test.ok(_.isEqual(args, findArgs));
+                test.ok(_.isEqual(args, findArgs), JSON.stringify({args: args, findArgs: findArgs}));
                 this.all = oldAll;
                 test.done();
             };
@@ -89,10 +89,10 @@ var suite = module.exports = {
         },
         "#find simply proxies #all when no callback is supplied": function (test) {
             var oldAll = this.model.all,
-                findArgs = ['index', 'key'];
+                findArgs = ['index_bin', 'key'];
             this.model.all = function () {
                 var args = _.rest(arguments, 0);
-                test.ok(_.isEqual(args, findArgs));
+                test.ok(_.isEqual(args, findArgs), JSON.stringify({args: args, findArgs: findArgs}));
                 this.all = oldAll;
                 test.done();
             };

@@ -3,7 +3,7 @@ var veryriak = require('../');
 
 module.exports = {
     setUp: function (cb) {
-        this.model = new veryriak.VeryRiakModel({});
+        this.model = new veryriak.VeryRiakModel({}, {});
         cb();
     },
     "model definition is defaults.definition by default": function (test) {
