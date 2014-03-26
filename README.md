@@ -3,7 +3,7 @@
 ## Riak extensions for VeryModel
 
 - Author: Aaron McCall <aaron@andyet.net>
-- Version: 0.10.1
+- Version: 0.11.0
 - License: MIT
 
 [![Code Climate](https://codeclimate.com/github/aaronmccall/verymodel-riak.png)](https://codeclimate.com/github/aaronmccall/verymodel-riak)
@@ -479,7 +479,7 @@ of passing { validate: false } to bypass validation
         save: function (cb, opts) {
             if (!opts || opts.validate !== false) {
                 var errors = this.doValidate();
-                if (errors) return cb(errors);
+                if (errors.length) return cb(errors);
             }
             var self = this;
             var logger = this.getLogger();
