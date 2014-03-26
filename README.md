@@ -472,9 +472,15 @@ Override default toJSON method to make more Hapi compatible
 ```
 
 **save**: Put this instance to Riak.
+May be called with an options object, currently only for the purpose
+of passing { validate: false } to bypass validation
 
 ```javascript
-        save: function (cb) {
+        save: function (cb, opts) {
+            if (!opts || opts.validate !== false) {
+                var errors = this.doValidate();
+                if (errors) return cb(errors);
+            }
             var self = this;
             var logger = this.getLogger();
             var payload = this.prepare();
