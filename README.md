@@ -388,7 +388,7 @@ Override default toJSON method to make more Hapi compatible
 **remove**: Remove an instance from Riak
 
 ```javascript
-        remove: function (id, bucket, cb) {
+        delete: function (id, bucket, cb) {
             var self = this;
             if (typeof bucket === 'function' && typeof cb === 'undefined') {
                 cb = bucket;
@@ -400,7 +400,13 @@ Override default toJSON method to make more Hapi compatible
                 self.getLogger().debug('successfully deleted account');
                 cb();
             });
-        }
+        },
+```
+
+backwards compatibility
+
+```javascript
+        remove: module.exports.methods.delete
     },
 ```
 
@@ -444,6 +450,12 @@ Override default toJSON method to make more Hapi compatible
 
 ```javascript
     instanceMethods: {
+```
+
+wrapper around this instance's 
+
+```javascript
+        delete: function (callback) {},
 ```
 
 **prepare**: Prepare a Riak request object from this instance.
