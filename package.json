@@ -30,7 +30,7 @@
     "ape": "0.3.8"
   },
   "dependencies": {
-    "verymodel": "1.8.1",
+    "verymodel": "~1.9.x",
     "underscore": "^1.5.2",
     "async": "^0.2.9",
     "bucker": "^1.0.9",
